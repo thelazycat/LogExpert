@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using NUnit.Framework;
 using LogExpert;
+using LogExpert.Classes.Log;
+using LogExpert.Entities;
 
 namespace UnitTests
 {
@@ -26,7 +28,7 @@ namespace UnitTests
         public void testShiftBuffers1()
         {
             int linesPerFile = 10;
-            MultifileOptions options = new MultifileOptions();
+            MultiFileOptions options = new MultiFileOptions();
             options.MaxDayTry = 0;
             options.FormatPattern = "*$J(.)";
             LinkedList<string> files = CreateTestfilesWithoutDate();

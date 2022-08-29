@@ -3,8 +3,10 @@ using LogExpert.Classes.Columnizer;
 using Moq;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.IO;
+using LogExpert.Classes;
+using LogExpert.Classes.Log;
+using LogExpert.Entities;
 
 namespace LogExpert.Tests
 {
@@ -65,7 +67,7 @@ namespace LogExpert.Tests
             string fileName, Type columnizerType)
         {
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
-            LogfileReader reader = new LogfileReader(path, new EncodingOptions(), true, 40, 50, new MultifileOptions());
+            LogfileReader reader = new LogfileReader(path, new EncodingOptions(), true, 40, 50, new MultiFileOptions());
             reader.ReadFiles();
 
             Mock<ILogLineColumnizer> autoColumnizer = new Mock<ILogLineColumnizer>();

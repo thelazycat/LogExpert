@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.IO;
-using System.Runtime.Serialization;
 using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Windows.Forms;
+using LogExpert.Classes;
+using LogExpert.Classes.Filter;
+using LogExpert.Entities;
+using LogExpert.Entities.EventArgs;
+using Newtonsoft.Json;
 using NLog;
 
-namespace LogExpert
+namespace LogExpert.Config
 {
     public class ConfigManager
     {
@@ -56,9 +60,17 @@ namespace LogExpert
             }
         }
         
-        public static string ConfigDir => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\LogExpert";
+        public static string ConfigDir => Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + Path.DirectorySeparatorChar + "LogExpert";
 
-        public static string PortableMode => Application.StartupPath + "\\portableMode.dat";
+        /// <summary>
+        /// Application.StartupPath + portable
+        /// </summary>
+        public static string PortableModeDir => Application.StartupPath + Path.DirectorySeparatorChar + "portable";
+
+        /// <summary>
+        /// portableMode.json
+        /// </summary>
+        public static string PortableModeSettingsFileName => "portableMode.json";
 
         public static Settings Settings => Instance._settings;
 
@@ -71,24 +83,17 @@ namespace LogExpert
             Instance.Save(Settings, flags);
         }
 
-        public static void Export(Stream fs)
+        public static void Export(FileInfo fileInfo)
         {
-            Instance.Save(fs, Settings, SettingsFlags.None);
-        }
-
-        public static void Import(Stream fs, ExportImportFlags flags)
-        {
-            Instance._settings = Instance.Import(Instance._settings, fs, flags);
-            Save(SettingsFlags.All);
+            Instance.Save(fileInfo, Settings);
         }
 
         public static void Import(FileInfo fileInfo, ExportImportFlags flags)
         {
-            Stream fs = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read);
-            ConfigManager.Import(fs, flags);
-            fs.Close();
+            Instance._settings = Instance.Import(Instance._settings, fileInfo, flags);
+            Save(SettingsFlags.All);
         }
-
+        
         #endregion
 
         #region Private Methods
@@ -99,7 +104,7 @@ namespace LogExpert
 
             string dir;
 
-            if (!File.Exists(PortableMode))
+            if (File.Exists(PortableModeDir + Path.DirectorySeparatorChar + PortableModeSettingsFileName) == false)
             {
                 _logger.Info("Load settings standard mode");
                dir = ConfigDir;
@@ -114,45 +119,49 @@ namespace LogExpert
             {
                 Directory.CreateDirectory(dir);
             }
-            if (!File.Exists(dir + "\\settings.dat"))
+
+            if (!File.Exists(dir + Path.DirectorySeparatorChar + "settings.json"))
             {
                 return LoadOrCreateNew(null);
             }
 
-            using (Stream fs = File.OpenRead(dir + "\\settings.dat"))
+            try
             {
-                try
-                {
-                    return LoadOrCreateNew(fs);
-                }   
-                catch (Exception e)
-                {
-                    _logger.Error(e,"Error loading settings: {0}");
-                    return LoadOrCreateNew(null);
-                }
+                FileInfo fileInfo = new FileInfo(dir + Path.DirectorySeparatorChar + "settings.json");
+                return LoadOrCreateNew(fileInfo);
             }
+            catch (Exception e)
+            {
+                _logger.Error($"Error loading settings: {e}");
+                return LoadOrCreateNew(null);
+            }
+
         }
 
-        private Settings LoadOrCreateNew(Stream fs)
+        /// <summary>
+        /// Loads Settings of a given file or creates new settings if the file does not exist
+        /// </summary>
+        /// <param name="fileInfo">file that has settings saved</param>
+        /// <returns>loaded or created settings</returns>
+        private Settings LoadOrCreateNew(FileSystemInfo fileInfo)
         {
             lock (_loadSaveLock)
             {
                 Settings settings;
 
-                if (fs == null)
+                if (fileInfo == null ||  fileInfo.Exists == false)
                 {
                     settings = new Settings();
                 }
                 else
                 {
-                    BinaryFormatter formatter = new BinaryFormatter();
                     try
                     {
-                        settings = (Settings) formatter.Deserialize(fs);
+                        settings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText($"{fileInfo.FullName}"));
                     }
-                    catch (SerializationException e)
+                    catch (Exception e)
                     {
-                        _logger.Error(e, "Error while deserializing config data: ");
+                        _logger.Error($"Error while deserializing config data: {e}");
                         settings = new Settings();
                     }
                 }
@@ -252,9 +261,9 @@ namespace LogExpert
                     settings.preferences.pollingInterval = 250;
                 }
 
-                if (settings.preferences.multifileOptions == null)
+                if (settings.preferences.multiFileOptions == null)
                 {
-                    settings.preferences.multifileOptions = new MultifileOptions();
+                    settings.preferences.multiFileOptions = new MultiFileOptions();
                 }
 
                 if (settings.preferences.defaultEncoding == null)
@@ -278,6 +287,11 @@ namespace LogExpert
             }
         }
 
+        /// <summary>
+        /// Saves the Settings to file, fires OnConfigChanged Event so LogTabWindow is updated
+        /// </summary>
+        /// <param name="settings">Settings to be saved</param>
+        /// <param name="flags">Settings that "changed"</param>
         private void Save(Settings settings, SettingsFlags flags)
         {
             lock (_loadSaveLock)
@@ -285,31 +299,42 @@ namespace LogExpert
                 _logger.Info("Saving settings");
                 lock (this)
                 {
-                    string dir = File.Exists(PortableMode) ? Application.StartupPath : ConfigDir;
+                    string dir = Settings.preferences.PortableMode ? Application.StartupPath : ConfigDir;
 
                     if (!Directory.Exists(dir))
                     {
                         Directory.CreateDirectory(dir);
                     }
 
-                    using (Stream fs = new FileStream(dir + "\\settings.dat", FileMode.Create, FileAccess.Write))
-                    {
-                        Save(fs, settings, flags);
-                    }
+                    FileInfo fileInfo = new FileInfo(dir + Path.DirectorySeparatorChar + "settings.json");
+                    Save(fileInfo, settings);
                 }
 
                 OnConfigChanged(flags);
             }
         }
 
-        private void Save(Stream fs, Settings settings, SettingsFlags flags)
+        /// <summary>
+        /// Saves the file in any defined format
+        /// </summary>
+        /// <param name="fileInfo">FileInfo for creating the file (if exists will be overwritten)</param>
+        /// <param name="settings">Current Settings</param>
+        private void Save(FileInfo fileInfo, Settings settings)
         {
-            //TODO SettingsFlags is currently not used => why does it exist
-            settings.versionBuild = Assembly.GetExecutingAssembly().GetName().Version.Build;
-            BinaryFormatter formatter = new BinaryFormatter();
-            formatter.Serialize(fs, settings);
+            //Currently only fileFormat, maybe add some other formats later (YAML or XML?)
+            SaveAsJSON(fileInfo, settings);
         }
 
+        private void SaveAsJSON(FileInfo fileInfo, Settings settings)
+        {
+            settings.versionBuild = Assembly.GetExecutingAssembly().GetName().Version.Build;
+
+            using (StreamWriter sw = new StreamWriter(fileInfo.Create()))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(sw, settings);
+            }
+        }
 
         /// <summary>
         /// Convert settings loaded from previous versions.
@@ -362,14 +387,15 @@ namespace LogExpert
 
 
         /// <summary>
-        /// Imports all or some of the settings/prefs stored in the inpute stream.
+        /// Imports all or some of the settings/prefs stored in the input stream.
         /// This will overwrite appropriate parts of the current (own) settings with the imported ones.
         /// </summary>
-        /// <param name="fs"></param>
+        /// <param name="currentSettings"></param>
+        /// <param name="fileInfo"></param>
         /// <param name="flags">Flags to indicate which parts shall be imported</param>
-        private Settings Import(Settings currentSettings, Stream fs, ExportImportFlags flags)
+        private Settings Import(Settings currentSettings, FileInfo fileInfo, ExportImportFlags flags)
         {
-            Settings importSettings = LoadOrCreateNew(fs);
+            Settings importSettings = LoadOrCreateNew(fileInfo);
             Settings ownSettings = ObjectClone.Clone(currentSettings);
             Settings newSettings;
 
@@ -390,22 +416,32 @@ namespace LogExpert
 
             if ((flags & ExportImportFlags.ColumnizerMasks) == ExportImportFlags.ColumnizerMasks)
             {
-                newSettings.preferences.columnizerMaskList = importSettings.preferences.columnizerMaskList;
+                newSettings.preferences.columnizerMaskList = ReplaceOrKeepExisting(flags, ownSettings.preferences.columnizerMaskList, importSettings.preferences.columnizerMaskList);
             }
             if ((flags & ExportImportFlags.HighlightMasks) == ExportImportFlags.HighlightMasks)
             {
-                newSettings.preferences.highlightMaskList = importSettings.preferences.highlightMaskList;
+                newSettings.preferences.highlightMaskList = ReplaceOrKeepExisting(flags, ownSettings.preferences.highlightMaskList, importSettings.preferences.highlightMaskList);
             }
             if ((flags & ExportImportFlags.HighlightSettings) == ExportImportFlags.HighlightSettings)
             {
-                newSettings.hilightGroupList = importSettings.hilightGroupList;
+               newSettings.hilightGroupList = ReplaceOrKeepExisting(flags, ownSettings.hilightGroupList, importSettings.hilightGroupList);
             }
             if ((flags & ExportImportFlags.ToolEntries) == ExportImportFlags.ToolEntries)
             {
-                newSettings.preferences.toolEntries = importSettings.preferences.toolEntries;
+                newSettings.preferences.toolEntries = ReplaceOrKeepExisting(flags, ownSettings.preferences.toolEntries, importSettings.preferences.toolEntries);
             }
 
             return newSettings;
+        }
+
+        private static List<T> ReplaceOrKeepExisting<T>(ExportImportFlags flags, List<T> existingList, List<T> newList)
+        {
+            if ((flags & ExportImportFlags.KeepExisting) == ExportImportFlags.KeepExisting)
+            {
+                return existingList.Union(newList).ToList();                
+            }
+
+            return newList;
         }
 
         #endregion

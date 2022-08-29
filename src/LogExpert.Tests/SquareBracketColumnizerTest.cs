@@ -3,6 +3,9 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using LogExpert.Classes.Columnizer;
+using LogExpert.Classes.Log;
+using LogExpert.Entities;
 
 namespace LogExpert
 {
@@ -18,7 +21,7 @@ namespace LogExpert
             SquareBracketColumnizer squareBracketColumnizer = new SquareBracketColumnizer();
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
 
-            LogfileReader logFileReader = new LogfileReader(path, new EncodingOptions(), true, 40, 50, new MultifileOptions());
+            LogfileReader logFileReader = new LogfileReader(path, new EncodingOptions(), true, 40, 50, new MultiFileOptions());
             logFileReader.ReadFiles();
             List<ILogLine> loglines = new List<ILogLine>
             {

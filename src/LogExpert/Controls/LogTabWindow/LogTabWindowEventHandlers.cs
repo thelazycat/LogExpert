@@ -3,66 +3,68 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using LogExpert.Classes;
+using LogExpert.Classes.Persister;
+using LogExpert.Config;
 using LogExpert.Dialogs;
+using LogExpert.Entities;
+using LogExpert.Entities.EventArgs;
 using WeifenLuo.WinFormsUI.Docking;
 
-namespace LogExpert
+namespace LogExpert.Controls.LogTabWindow
 {
     public partial class LogTabWindow
     {
         #region Events handler
 
-        private void bookmarkWindow_VisibleChanged(object sender, EventArgs e)
+        private void OnBookmarkWindowVisibleChanged(object sender, EventArgs e)
         {
-            firstBookmarkWindowShow = false;
+            _firstBookmarkWindowShow = false;
         }
 
-        private void LogTabWindow_Load(object sender, EventArgs e)
+        private void OnLogTabWindowLoad(object sender, EventArgs e)
         {
             ApplySettings(ConfigManager.Settings, SettingsFlags.All);
             if (ConfigManager.Settings.isMaximized)
             {
-                if (ConfigManager.Settings.appBoundsFullscreen != null)
-                {
-                    Bounds = ConfigManager.Settings.appBoundsFullscreen;
-                }
+                Bounds = ConfigManager.Settings.appBoundsFullscreen;
                 WindowState = FormWindowState.Maximized;
                 Bounds = ConfigManager.Settings.appBounds;
             }
             else
             {
-                if (ConfigManager.Settings.appBounds != null && ConfigManager.Settings.appBounds.Right > 0)
+                if (ConfigManager.Settings.appBounds.Right > 0)
                 {
                     Bounds = ConfigManager.Settings.appBounds;
                 }
             }
 
-            if (ConfigManager.Settings.preferences.openLastFiles && startupFileNames == null)
+            if (ConfigManager.Settings.preferences.openLastFiles && _startupFileNames == null)
             {
-                List<string> tmpList = ObjectClone.Clone<List<string>>(ConfigManager.Settings.lastOpenFilesList);
+                List<string> tmpList = ObjectClone.Clone(ConfigManager.Settings.lastOpenFilesList);
+
                 foreach (string name in tmpList)
                 {
-                    if (name != null && name.Length > 0)
+                    if (string.IsNullOrEmpty(name) == false)
                     {
                         AddFileTab(name, false, null, false, null);
                     }
                 }
             }
-            if (startupFileNames != null)
+            if (_startupFileNames != null)
             {
-                LoadFiles(startupFileNames, false);
+                LoadFiles(_startupFileNames, false);
             }
-            ledThread = new Thread(LedThreadProc);
-            ledThread.IsBackground = true;
-            ledThread.Start();
+            _ledThread = new Thread(LedThreadProc);
+            _ledThread.IsBackground = true;
+            _ledThread.Start();
 
-            statusLineThread = new Thread(StatusLineThreadFunc);
-            statusLineThread.IsBackground = true;
-            statusLineThread.Start();
+            _statusLineThread = new Thread(StatusLineThreadFunc);
+            _statusLineThread.IsBackground = true;
+            _statusLineThread.Start();
 
             FillHighlightComboBox();
             FillToolLauncherBar();
@@ -71,26 +73,26 @@ namespace LogExpert
 #endif
         }
 
-        private void LogTabWindow_Closing(object sender, CancelEventArgs e)
+        private void OnLogTabWindowClosing(object sender, CancelEventArgs e)
         {
             try
             {
-                shouldStop = true;
-                statusLineEventHandle.Set();
-                statusLineEventWakeupHandle.Set();
-                ledThread.Join();
-                statusLineThread.Join();
+                _shouldStop = true;
+                _statusLineEventHandle.Set();
+                _statusLineEventWakeupHandle.Set();
+                _ledThread.Join();
+                _statusLineThread.Join();
 
-                IList<LogWindow> deleteLogWindowList = new List<LogWindow>();
+                IList<LogWindow.LogWindow> deleteLogWindowList = new List<LogWindow.LogWindow>();
                 ConfigManager.Settings.alwaysOnTop = TopMost && ConfigManager.Settings.preferences.allowOnlyOneInstance;
                 SaveLastOpenFilesList();
 
-                foreach (LogWindow logWindow in logWindowList)
+                foreach (LogWindow.LogWindow logWindow in _logWindowList)
                 {
                     deleteLogWindowList.Add(logWindow);
                 }
 
-                foreach (LogWindow logWindow in deleteLogWindowList)
+                foreach (LogWindow.LogWindow logWindow in deleteLogWindowList)
                 {
                     RemoveAndDisposeLogWindow(logWindow, true);
                 }
@@ -109,72 +111,72 @@ namespace LogExpert
             }
             finally
             {
-                if (LogExpertProxy != null)
-                {
-                    LogExpertProxy.WindowClosed(this);
-                }
+                LogExpertProxy?.WindowClosed(this);
             }
         }
 
-        private void strip_MouseUp(object sender, MouseEventArgs e)
+        private void OnStripMouseUp(object sender, MouseEventArgs e)
         {
-            if (sender is ToolStripDropDown)
+            if (sender is ToolStripDropDown dropDown)
             {
-                AddFileTab(((ToolStripDropDown) sender).Text, false, null, false, null);
+                AddFileTab(dropDown.Text, false, null, false, null);
             }
         }
 
-        private void history_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        private void OnHistoryItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
-            if (e.ClickedItem.Text != null && e.ClickedItem.Text.Length > 0)
+            if (string.IsNullOrEmpty(e.ClickedItem.Text) == false)
             {
                 AddFileTab(e.ClickedItem.Text, false, null, false, null);
             }
         }
 
-        private void logWindow_Disposed(object sender, EventArgs e)
+        private void OnLogWindowDisposed(object sender, EventArgs e)
         {
-            LogWindow logWindow = sender as LogWindow;
+            LogWindow.LogWindow logWindow = sender as LogWindow.LogWindow;
+            
             if (sender == CurrentLogWindow)
             {
                 ChangeCurrentLogWindow(null);
             }
+            
             RemoveLogWindow(logWindow);
+            
             logWindow.Tag = null;
         }
 
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnExitToolStripMenuItemClick(object sender, EventArgs e)
         {
             Close();
         }
 
-        private void selectFilterToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnSelectFilterToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (CurrentLogWindow == null)
             {
                 return;
             }
+
             CurrentLogWindow.ColumnizerCallbackObject.LineNum = CurrentLogWindow.GetCurrentLineNum();
-            FilterSelectorForm form = new FilterSelectorForm(PluginRegistry.GetInstance().RegisteredColumnizers,
-                CurrentLogWindow.CurrentColumnizer,
-                CurrentLogWindow.ColumnizerCallbackObject);
+            FilterSelectorForm form = new FilterSelectorForm(PluginRegistry.GetInstance().RegisteredColumnizers, CurrentLogWindow.CurrentColumnizer, CurrentLogWindow.ColumnizerCallbackObject);
             form.Owner = this;
             form.TopMost = TopMost;
             DialogResult res = form.ShowDialog();
+            
             if (res == DialogResult.OK)
             {
                 if (form.ApplyToAll)
                 {
-                    lock (logWindowList)
+                    lock (_logWindowList)
                     {
-                        foreach (LogWindow logWindow in logWindowList)
+                        foreach (LogWindow.LogWindow logWindow in _logWindowList)
                         {
-                            if (!logWindow.CurrentColumnizer.GetType().Equals(form.SelectedColumnizer.GetType()))
+                            if (logWindow.CurrentColumnizer.GetType() != form.SelectedColumnizer.GetType())
                             {
                                 //logWindow.SetColumnizer(form.SelectedColumnizer);
                                 SetColumnizerFx fx = logWindow.ForceColumnizer;
                                 logWindow.Invoke(fx, form.SelectedColumnizer);
-                                setColumnizerHistoryEntry(logWindow.FileName, form.SelectedColumnizer);
+                                SetColumnizerHistoryEntry(logWindow.FileName, form.SelectedColumnizer);
                             }
                             else
                             {
@@ -188,19 +190,20 @@ namespace LogExpert
                 }
                 else
                 {
-                    if (!CurrentLogWindow.CurrentColumnizer.GetType().Equals(form.SelectedColumnizer.GetType()))
+                    if (CurrentLogWindow.CurrentColumnizer.GetType() != form.SelectedColumnizer.GetType())
                     {
                         SetColumnizerFx fx = CurrentLogWindow.ForceColumnizer;
                         CurrentLogWindow.Invoke(fx, form.SelectedColumnizer);
-                        setColumnizerHistoryEntry(CurrentLogWindow.FileName, form.SelectedColumnizer);
+                        SetColumnizerHistoryEntry(CurrentLogWindow.FileName, form.SelectedColumnizer);
                     }
+
                     if (form.IsConfigPressed)
                     {
-                        lock (logWindowList)
+                        lock (_logWindowList)
                         {
-                            foreach (LogWindow logWindow in logWindowList)
+                            foreach (LogWindow.LogWindow logWindow in _logWindowList)
                             {
-                                if (logWindow.CurrentColumnizer.GetType().Equals(form.SelectedColumnizer.GetType()))
+                                if (logWindow.CurrentColumnizer.GetType() == form.SelectedColumnizer.GetType())
                                 {
                                     logWindow.ColumnizerConfigChanged();
                                 }
@@ -211,12 +214,13 @@ namespace LogExpert
             }
         }
 
-        private void goToLineToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnGoToLineToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (CurrentLogWindow == null)
             {
                 return;
             }
+
             GotoLineDialog dlg = new GotoLineDialog(this);
             DialogResult res = dlg.ShowDialog();
             if (res == DialogResult.OK)
@@ -229,22 +233,22 @@ namespace LogExpert
             }
         }
 
-        private void hilightingToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnHighlightingToolStripMenuItemClick(object sender, EventArgs e)
         {
             ShowHighlightSettingsDialog();
         }
 
-        private void searchToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnSearchToolStripMenuItemClick(object sender, EventArgs e)
         {
             OpenSearchDialog();
         }
 
-        private void openToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnOpenToolStripMenuItemClick(object sender, EventArgs e)
         {
             OpenFileDialog();
         }
 
-        private void LogTabWindow_DragEnter(object sender, DragEventArgs e)
+        private void OnLogTabWindowDragEnter(object sender, DragEventArgs e)
         {
 #if DEBUG
             string[] formats = e.Data.GetFormats();
@@ -259,7 +263,7 @@ namespace LogExpert
 #endif
         }
 
-        private void LogWindow_DragOver(object sender, DragEventArgs e)
+        private void OnLogWindowDragOver(object sender, DragEventArgs e)
         {
             if (!e.Data.GetDataPresent(DataFormats.FileDrop))
             {
@@ -271,7 +275,7 @@ namespace LogExpert
             }
         }
 
-        private void LogWindow_DragDrop(object sender, DragEventArgs e)
+        private void OnLogWindowDragDrop(object sender, DragEventArgs e)
         {
 #if DEBUG
             string[] formats = e.Data.GetFormats();
@@ -288,8 +292,7 @@ namespace LogExpert
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 object o = e.Data.GetData(DataFormats.FileDrop);
-                string[] names = o as string[];
-                if (names != null)
+                if (o is string[] names)
                 {
                     LoadFiles(names, (e.KeyState & 4) == 4); // (shift pressed?)
                     e.Effect = DragDropEffects.Copy;
@@ -297,9 +300,9 @@ namespace LogExpert
             }
         }
 
-        private void timeshiftToolStripMenuItem_CheckStateChanged(object sender, EventArgs e)
+        private void OnTimeShiftToolStripMenuItemCheckStateChanged(object sender, EventArgs e)
         {
-            if (!skipEvents && CurrentLogWindow != null)
+            if (!_skipEvents && CurrentLogWindow != null)
             {
                 CurrentLogWindow.SetTimeshiftValue(timeshiftMenuTextBox.Text);
                 timeshiftMenuTextBox.Enabled = timeshiftToolStripMenuItem.Checked;
@@ -308,104 +311,74 @@ namespace LogExpert
             }
         }
 
-        private void aboutToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnAboutToolStripMenuItemClick(object sender, EventArgs e)
         {
             AboutBox aboutBox = new AboutBox();
             aboutBox.TopMost = TopMost;
             aboutBox.ShowDialog();
         }
-
-        private void filterToggleButton_Click(object sender, EventArgs e)
+        
+        private void OnFilterToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ToggleFilterPanel();
-            }
+            CurrentLogWindow?.ToggleFilterPanel();
         }
 
-        private void filterToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ToggleFilterPanel();
-            }
-        }
-
-        private void multiFileToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnMultiFileToolStripMenuItemClick(object sender, EventArgs e)
         {
             ToggleMultiFile();
-            toolStripMenuItem1.HideDropDown();
+            fileToolStripMenuItem.HideDropDown();
         }
 
-        private void GuiStateUpdate(object sender, GuiStateArgs e)
+        private void OnGuiStateUpdate(object sender, GuiStateArgs e)
         {
             BeginInvoke(new GuiStateUpdateWorkerDelegate(GuiStateUpdateWorker), e);
         }
 
-        private void ColumnizerChanged(object sender, ColumnizerEventArgs e)
+        private void OnColumnizerChanged(object sender, ColumnizerEventArgs e)
         {
-            if (bookmarkWindow != null)
-            {
-                bookmarkWindow.SetColumnizer(e.Columnizer);
-            }
+            _bookmarkWindow?.SetColumnizer(e.Columnizer);
         }
 
-        private void BookmarkAdded(object sender, EventArgs e)
+        private void OnBookmarkAdded(object sender, EventArgs e)
         {
-            bookmarkWindow.UpdateView();
+            _bookmarkWindow.UpdateView();
         }
 
-        private void BookmarkTextChanged(object sender, BookmarkEventArgs e)
+        private void OnBookmarkTextChanged(object sender, BookmarkEventArgs e)
         {
-            bookmarkWindow.BookmarkTextChanged(e.Bookmark);
+            _bookmarkWindow.BookmarkTextChanged(e.Bookmark);
         }
 
-        private void BookmarkRemoved(object sender, EventArgs e)
+        private void OnBookmarkRemoved(object sender, EventArgs e)
         {
-            bookmarkWindow.UpdateView();
+            _bookmarkWindow.UpdateView();
         }
 
-        private void ProgressBarUpdate(object sender, ProgressEventArgs e)
+        private void OnProgressBarUpdate(object sender, ProgressEventArgs e)
         {
             Invoke(new ProgressBarEventFx(ProgressBarUpdateWorker), e);
         }
 
-        private void StatusLineEvent(object sender, StatusLineEventArgs e)
+        private void OnStatusLineEvent(object sender, StatusLineEventArgs e)
         {
-            lock (statusLineLock)
+            lock (_statusLineLock)
             {
-                lastStatusLineEvent = e;
-                statusLineEventHandle.Set();
-                statusLineEventWakeupHandle.Set();
+                _lastStatusLineEvent = e;
+                _statusLineEventHandle.Set();
+                _statusLineEventWakeupHandle.Set();
             }
         }
 
-        private void followTailCheckBox_Click(object sender, EventArgs e)
+        private void OnFollowTailCheckBoxClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.FollowTailChanged(followTailCheckBox.Checked, false);
-            }
+            CurrentLogWindow?.FollowTailChanged(checkBoxFollowTail.Checked, false);
         }
-
-        private void toolStripOpenButton_Click_1(object sender, EventArgs e)
-        {
-            OpenFileDialog();
-        }
-
-        private void toolStripSearchButton_Click_1(object sender, EventArgs e)
-        {
-            OpenSearchDialog();
-        }
-
-        private void LogTabWindow_KeyDown(object sender, KeyEventArgs e)
+        
+        private void OnLogTabWindowKeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.W && e.Control)
             {
-                if (CurrentLogWindow != null)
-                {
-                    CurrentLogWindow.Close();
-                }
+                CurrentLogWindow?.Close();
             }
             else if (e.KeyCode == Keys.Tab && e.Control)
             {
@@ -413,43 +386,32 @@ namespace LogExpert
             }
             else
             {
-                if (CurrentLogWindow != null)
-                {
-                    CurrentLogWindow.LogWindow_KeyDown(sender, e);
-                }
+                CurrentLogWindow?.OnLogWindowKeyDown(sender, e);
             }
         }
 
-        private void closeFileToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnCloseFileToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.Close();
-            }
+            CurrentLogWindow?.Close();
         }
 
-        private void cellSelectModeToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnCellSelectModeToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.SetCellSelectionMode(cellSelectModeToolStripMenuItem.Checked);
-            }
+            CurrentLogWindow?.SetCellSelectionMode(cellSelectModeToolStripMenuItem.Checked);
         }
 
-        private void copyMarkedLinesIntoNewTabToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnCopyMarkedLinesIntoNewTabToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.CopyMarkedLinesToTab();
-            }
+            CurrentLogWindow?.CopyMarkedLinesToTab();
         }
 
-        private void timeshiftMenuTextBox_KeyDown(object sender, KeyEventArgs e)
+        private void OnTimeShiftMenuTextBoxKeyDown(object sender, KeyEventArgs e)
         {
             if (CurrentLogWindow == null)
             {
                 return;
             }
+
             if (e.KeyCode == Keys.Enter)
             {
                 e.Handled = true;
@@ -457,26 +419,26 @@ namespace LogExpert
             }
         }
 
-        private void alwaysOnTopToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnAlwaysOnTopToolStripMenuItemClick(object sender, EventArgs e)
         {
             TopMost = alwaysOnTopToolStripMenuItem.Checked;
         }
 
-        private void FileSizeChanged(object sender, LogEventArgs e)
+        private void OnFileSizeChanged(object sender, LogEventArgs e)
         {
-            if (sender.GetType().IsAssignableFrom(typeof(LogWindow)))
+            if (sender.GetType().IsAssignableFrom(typeof(LogWindow.LogWindow)))
             {
                 int diff = e.LineCount - e.PrevLineCount;
                 if (diff < 0)
                 {
                     return;
                 }
-                LogWindowData data = ((LogWindow) sender).Tag as LogWindowData;
-                if (data != null)
+
+                if (((LogWindow.LogWindow) sender).Tag is LogWindowData data)
                 {
                     lock (data)
                     {
-                        data.diffSum = data.diffSum + diff;
+                        data.diffSum += diff;
                         if (data.diffSum > DIFF_MAX)
                         {
                             data.diffSum = DIFF_MAX;
@@ -491,26 +453,26 @@ namespace LogExpert
                         data.dirty = true;
                     }
                     Icon icon = GetIcon(diff, data);
-                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow) sender, icon);
+                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow) sender, icon);
                 }
             }
         }
 
-        private void logWindow_FileNotFound(object sender, EventArgs e)
+        private void OnLogWindowFileNotFound(object sender, EventArgs e)
         {
             Invoke(new FileNotFoundDelegate(FileNotFound), sender);
         }
 
-        private void logWindow_FileRespawned(object sender, EventArgs e)
+        private void OnLogWindowFileRespawned(object sender, EventArgs e)
         {
             Invoke(new FileRespawnedDelegate(FileRespawned), sender);
         }
 
-        private void logWindow_FilterListChanged(object sender, FilterListChangedEventArgs e)
+        private void OnLogWindowFilterListChanged(object sender, FilterListChangedEventArgs e)
         {
-            lock (logWindowList)
+            lock (_logWindowList)
             {
-                foreach (LogWindow logWindow in logWindowList)
+                foreach (LogWindow.LogWindow logWindow in _logWindowList)
                 {
                     if (logWindow != e.LogWindow)
                     {
@@ -521,39 +483,39 @@ namespace LogExpert
             ConfigManager.Save(SettingsFlags.FilterList);
         }
 
-        private void logWindow_CurrentHighlightGroupChanged(object sender, CurrentHighlightGroupChangedEventArgs e)
+        private void OnLogWindowCurrentHighlightGroupChanged(object sender, CurrentHighlightGroupChangedEventArgs e)
         {
             OnHighlightSettingsChanged();
             ConfigManager.Settings.hilightGroupList = HilightGroupList;
             ConfigManager.Save(SettingsFlags.HighlightSettings);
         }
 
-        private void TailFollowed(object sender, EventArgs e)
+        private void OnTailFollowed(object sender, EventArgs e)
         {
             if (dockPanel.ActiveContent == null)
             {
                 return;
             }
-            if (sender.GetType().IsAssignableFrom(typeof(LogWindow)))
+            if (sender.GetType().IsAssignableFrom(typeof(LogWindow.LogWindow)))
             {
                 if (dockPanel.ActiveContent == sender)
                 {
-                    LogWindowData data = ((LogWindow) sender).Tag as LogWindowData;
+                    LogWindowData data = ((LogWindow.LogWindow) sender).Tag as LogWindowData;
                     data.dirty = false;
                     Icon icon = GetIcon(data.diffSum, data);
-                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow) sender, icon);
+                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow) sender, icon);
                 }
             }
         }
 
-        private void logWindow_SyncModeChanged(object sender, SyncModeEventArgs e)
+        private void OnLogWindowSyncModeChanged(object sender, SyncModeEventArgs e)
         {
             if (!Disposing)
             {
-                LogWindowData data = ((LogWindow) sender).Tag as LogWindowData;
+                LogWindowData data = ((LogWindow.LogWindow) sender).Tag as LogWindowData;
                 data.syncMode = e.IsTimeSynced ? 1 : 0;
                 Icon icon = GetIcon(data.diffSum, data);
-                BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow) sender, icon);
+                BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow) sender, icon);
             }
             else
             {
@@ -561,71 +523,47 @@ namespace LogExpert
             }
         }
 
-        private void toggleBookmarkToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnToggleBookmarkToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ToggleBookmark();
-            }
+            CurrentLogWindow?.ToggleBookmark();
         }
 
-        private void jumpToNextToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnJumpToNextToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.JumpNextBookmark();
-            }
+            CurrentLogWindow?.JumpNextBookmark();
         }
 
-        private void jumpToPrevToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnJumpToPrevToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.JumpPrevBookmark();
-            }
+            CurrentLogWindow?.JumpPrevBookmark();
         }
 
-        private void aSCIIToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnASCIIToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ChangeEncoding(Encoding.ASCII);
-            }
+            CurrentLogWindow?.ChangeEncoding(Encoding.ASCII);
         }
 
-        private void aNSIToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnANSIToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ChangeEncoding(Encoding.Default);
-            }
+            CurrentLogWindow?.ChangeEncoding(Encoding.Default);
         }
 
-        private void uTF8ToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnUTF8ToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ChangeEncoding(new UTF8Encoding(false));
-            }
+            CurrentLogWindow?.ChangeEncoding(new UTF8Encoding(false));
         }
 
-        private void uTF16ToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnUTF16ToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ChangeEncoding(Encoding.Unicode);
-            }
+            CurrentLogWindow?.ChangeEncoding(Encoding.Unicode);
         }
 
-        private void iSO88591ToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnISO88591ToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ChangeEncoding(Encoding.GetEncoding("iso-8859-1"));
-            }
+            CurrentLogWindow?.ChangeEncoding(Encoding.GetEncoding("iso-8859-1"));
         }
 
-        private void reloadToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnReloadToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (CurrentLogWindow != null)
             {
@@ -636,12 +574,12 @@ namespace LogExpert
             }
         }
 
-        private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnSettingsToolStripMenuItemClick(object sender, EventArgs e)
         {
             OpenSettings(0);
         }
 
-        private void dateTimeDragControl_ValueDragged(object sender, EventArgs e)
+        private void OnDateTimeDragControlValueDragged(object sender, EventArgs e)
         {
             if (CurrentLogWindow != null)
             {
@@ -649,141 +587,105 @@ namespace LogExpert
             }
         }
 
-        private void dateTimeDragControl_ValueChanged(object sender, EventArgs e)
+        private void OnDateTimeDragControlValueChanged(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
+            CurrentLogWindow?.ScrollToTimestamp(dragControlDateTime.DateTime, true, true);
+        }
+
+        private void OnLogTabWindowDeactivate(object sender, EventArgs e)
+        {
+            CurrentLogWindow?.AppFocusLost();
+        }
+
+        private void OnLogTabWindowActivated(object sender, EventArgs e)
+        {
+            CurrentLogWindow?.AppFocusGained();
+        }
+        
+        private void OnShowBookmarkListToolStripMenuItemClick(object sender, EventArgs e)
+        {
+            if (_bookmarkWindow.Visible)
             {
-                CurrentLogWindow.ScrollToTimestamp(dateTimeDragControl.DateTime, true, true);
-            }
-        }
-
-        private void LogTabWindow_Deactivate(object sender, EventArgs e)
-        {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.AppFocusLost();
-            }
-        }
-
-        private void LogTabWindow_Activated(object sender, EventArgs e)
-        {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.AppFocusGained();
-            }
-        }
-
-        private void toolStripButtonA_Click(object sender, EventArgs e)
-        {
-            ToolButtonClick(ConfigManager.Settings.preferences.toolEntries[0]);
-        }
-
-        private void toolStripButtonB_Click(object sender, EventArgs e)
-        {
-            ToolButtonClick(ConfigManager.Settings.preferences.toolEntries[1]);
-        }
-
-        private void toolStripButtonC_Click(object sender, EventArgs e)
-        {
-            ToolButtonClick(ConfigManager.Settings.preferences.toolEntries[2]);
-        }
-
-        private void showBookmarkListToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (bookmarkWindow.Visible)
-            {
-                bookmarkWindow.Hide();
+                _bookmarkWindow.Hide();
             }
             else
             {
                 // strange: on very first Show() now bookmarks are displayed. after a hide it will work.
-                if (firstBookmarkWindowShow)
+                if (_firstBookmarkWindowShow)
                 {
-                    bookmarkWindow.Show(dockPanel);
-                    bookmarkWindow.Hide();
+                    _bookmarkWindow.Show(dockPanel);
+                    _bookmarkWindow.Hide();
                 }
 
-                bookmarkWindow.Show(dockPanel);
+                _bookmarkWindow.Show(dockPanel);
             }
         }
 
-        private void toolStripButtonOpen_Click(object sender, EventArgs e)
+        private void OnToolStripButtonOpenClick(object sender, EventArgs e)
         {
             OpenFileDialog();
         }
 
-        private void toolStripButtonSearch_Click(object sender, EventArgs e)
+        private void OnToolStripButtonSearchClick(object sender, EventArgs e)
         {
             OpenSearchDialog();
         }
 
-        private void toolStripButtonFilter_Click(object sender, EventArgs e)
+        private void OnToolStripButtonFilterClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ToggleFilterPanel();
-            }
+            CurrentLogWindow?.ToggleFilterPanel();
         }
 
-        private void toolStripButtonBookmark_Click(object sender, EventArgs e)
+        private void OnToolStripButtonBookmarkClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ToggleBookmark();
-            }
+            CurrentLogWindow?.ToggleBookmark();
         }
 
-        private void toolStripButtonUp_Click(object sender, EventArgs e)
+        private void OnToolStripButtonUpClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.JumpPrevBookmark();
-            }
+            CurrentLogWindow?.JumpPrevBookmark();
         }
 
-        private void toolStripButtonDown_Click(object sender, EventArgs e)
+        private void OnToolStripButtonDownClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.JumpNextBookmark();
-            }
+            CurrentLogWindow?.JumpNextBookmark();
         }
 
-        private void showHelpToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnShowHelpToolStripMenuItemClick(object sender, EventArgs e)
         {
             Help.ShowHelp(this, "LogExpert.chm");
         }
 
-        private void hideLineColumnToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnHideLineColumnToolStripMenuItemClick(object sender, EventArgs e)
         {
             ConfigManager.Settings.hideLineColumn = hideLineColumnToolStripMenuItem.Checked;
-            lock (logWindowList)
+            lock (_logWindowList)
             {
-                foreach (LogWindow logWin in logWindowList)
+                foreach (LogWindow.LogWindow logWin in _logWindowList)
                 {
                     logWin.ShowLineColumn(!ConfigManager.Settings.hideLineColumn);
                 }
             }
-            bookmarkWindow.LineColumnVisible = ConfigManager.Settings.hideLineColumn;
+            _bookmarkWindow.LineColumnVisible = ConfigManager.Settings.hideLineColumn;
         }
 
         // ==================================================================
         // Tab context menu stuff
         // ==================================================================
 
-        private void closeThisTabToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnCloseThisTabToolStripMenuItemClick(object sender, EventArgs e)
         {
-            (dockPanel.ActiveContent as LogWindow).Close();
+            (dockPanel.ActiveContent as LogWindow.LogWindow).Close();
         }
 
-        private void closeOtherTabsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnCloseOtherTabsToolStripMenuItemClick(object sender, EventArgs e)
         {
             IList<Form> closeList = new List<Form>();
-            lock (logWindowList)
+            lock (_logWindowList)
             {
                 foreach (DockContent content in dockPanel.Contents)
                 {
-                    if (content != dockPanel.ActiveContent && content is LogWindow)
+                    if (content != dockPanel.ActiveContent && content is LogWindow.LogWindow)
                     {
                         closeList.Add(content as Form);
                     }
@@ -795,14 +697,14 @@ namespace LogExpert
             }
         }
 
-        private void closeAllTabsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnCloseAllTabsToolStripMenuItemClick(object sender, EventArgs e)
         {
             CloseAllTabs();
         }
 
-        private void tabColorToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnTabColorToolStripMenuItemClick(object sender, EventArgs e)
         {
-            LogWindow logWindow = dockPanel.ActiveContent as LogWindow;
+            LogWindow.LogWindow logWindow = dockPanel.ActiveContent as LogWindow.LogWindow;
 
             LogWindowData data = logWindow.Tag as LogWindowData;
             if (data == null)
@@ -815,12 +717,12 @@ namespace LogExpert
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 data.color = dlg.Color;
-                setTabColor(logWindow, data.color);
+                SetTabColor(logWindow, data.color);
             }
             List<ColorEntry> delList = new List<ColorEntry>();
             foreach (ColorEntry entry in ConfigManager.Settings.fileColors)
             {
-                if (entry.fileName.ToLower().Equals(logWindow.FileName.ToLower()))
+                if (entry.FileName.ToLower().Equals(logWindow.FileName.ToLower()))
                 {
                     delList.Add(entry);
                 }
@@ -836,44 +738,33 @@ namespace LogExpert
             }
         }
 
-        private void LogTabWindow_SizeChanged(object sender, EventArgs e)
+        private void OnLogTabWindowSizeChanged(object sender, EventArgs e)
         {
             if (WindowState != FormWindowState.Minimized)
             {
-                wasMaximized = WindowState == FormWindowState.Maximized;
+                _wasMaximized = WindowState == FormWindowState.Maximized;
             }
         }
-
-        private void patternStatisticToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.PatternStatistic();
-            }
-        }
-
-        private void saveProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        
+        private void OnSaveProjectToolStripMenuItemClick(object sender, EventArgs e)
         {
             SaveFileDialog dlg = new SaveFileDialog();
             dlg.DefaultExt = "lxj";
-            dlg.Filter = "LogExpert session (*.lxj)|*.lxj";
+            dlg.Filter = @"LogExpert session (*.lxj)|*.lxj";
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string fileName = dlg.FileName;
                 List<string> fileNames = new List<string>();
 
-                lock (logWindowList)
+                lock (_logWindowList)
                 {
                     foreach (DockContent content in dockPanel.Contents)
                     {
-                        LogWindow logWindow = content as LogWindow;
-                        if (logWindow != null)
+                        LogWindow.LogWindow logWindow = content as LogWindow.LogWindow;
+                        string persistenceFileName = logWindow?.SavePersistenceData(true);
+                        if (persistenceFileName != null)
                         {
-                            string persistenceFileName = logWindow.SavePersistenceData(true);
-                            if (persistenceFileName != null)
-                            {
-                                fileNames.Add(persistenceFileName);
-                            }
+                            fileNames.Add(persistenceFileName);
                         }
                     }
                 }
@@ -884,11 +775,12 @@ namespace LogExpert
             }
         }
 
-        private void loadProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnLoadProjectToolStripMenuItemClick(object sender, EventArgs e)
         {
             OpenFileDialog dlg = new OpenFileDialog();
             dlg.DefaultExt = "lxj";
-            dlg.Filter = "LogExpert sessions (*.lxj)|*.lxj";
+            dlg.Filter = @"LogExpert sessions (*.lxj)|*.lxj";
+            
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string projectFileName = dlg.FileName;
@@ -896,7 +788,7 @@ namespace LogExpert
             }
         }
 
-        private void toolStripButtonBubbles_Click(object sender, EventArgs e)
+        private void OnToolStripButtonBubblesClick(object sender, EventArgs e)
         {
             if (CurrentLogWindow != null)
             {
@@ -904,15 +796,15 @@ namespace LogExpert
             }
         }
 
-        private void copyPathToClipboardToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnCopyPathToClipboardToolStripMenuItemClick(object sender, EventArgs e)
         {
-            LogWindow logWindow = dockPanel.ActiveContent as LogWindow;
+            LogWindow.LogWindow logWindow = dockPanel.ActiveContent as LogWindow.LogWindow;
             Clipboard.SetText(logWindow.Title);
         }
 
-        private void findInExplorerToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnFindInExplorerToolStripMenuItemClick(object sender, EventArgs e)
         {
-            LogWindow logWindow = dockPanel.ActiveContent as LogWindow;
+            LogWindow.LogWindow logWindow = dockPanel.ActiveContent as LogWindow.LogWindow;
 
             Process explorer = new Process();
             explorer.StartInfo.FileName = "explorer.exe";
@@ -921,33 +813,22 @@ namespace LogExpert
             explorer.Start();
         }
 
-        private void exportBookmarksToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnExportBookmarksToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ExportBookmarkList();
-            }
+            CurrentLogWindow?.ExportBookmarkList();
         }
-
-        private void importBookmarksToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ImportBookmarkList();
-            }
-        }
-
-        private void highlightGroupsComboBox_DropDownClosed(object sender, EventArgs e)
+        
+        private void OnHighlightGroupsComboBoxDropDownClosed(object sender, EventArgs e)
         {
             ApplySelectedHighlightGroup();
         }
 
-        private void highlightGroupsComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void OnHighlightGroupsComboBoxSelectedIndexChanged(object sender, EventArgs e)
         {
             ApplySelectedHighlightGroup();
         }
 
-        private void highlightGroupsComboBox_MouseUp(object sender, MouseEventArgs e)
+        private void OnHighlightGroupsComboBoxMouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right)
             {
@@ -963,149 +844,130 @@ namespace LogExpert
             }
         }
 
-        private void dumpLogBufferInfoToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnDumpLogBufferInfoToolStripMenuItemClick(object sender, EventArgs e)
         {
 #if DEBUG
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.DumpBufferInfo();
-            }
+            CurrentLogWindow?.DumpBufferInfo();
 #endif
         }
 
-        private void dumpBufferDiagnosticToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnDumpBufferDiagnosticToolStripMenuItemClick(object sender, EventArgs e)
         {
 #if DEBUG
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.DumpBufferDiagnostic();
-            }
+            CurrentLogWindow?.DumpBufferDiagnostic();
 #endif
         }
 
-        private void runGCToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnRunGCToolStripMenuItemClick(object sender, EventArgs e)
         {
-            runGC();
+            RunGC();
         }
 
-        private void gCInfoToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnGCInfoToolStripMenuItemClick(object sender, EventArgs e)
         {
-            dumpGCInfo();
+            DumpGCInfo();
         }
 
-        private void toolsToolStripMenuItem_DropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        private void OnToolsToolStripMenuItemDropDownItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
-            if (e.ClickedItem.Tag is ToolEntry)
+            if (e.ClickedItem.Tag is ToolEntry tag)
             {
-                ToolButtonClick(e.ClickedItem.Tag as ToolEntry);
+                ToolButtonClick(tag);
             }
         }
 
-        private void externalToolsToolStrip_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        private void OnExternalToolsToolStripItemClicked(object sender, ToolStripItemClickedEventArgs e)
         {
             ToolButtonClick(e.ClickedItem.Tag as ToolEntry);
         }
 
-        private void configureToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnConfigureToolStripMenuItemClick(object sender, EventArgs e)
         {
             OpenSettings(2);
         }
 
-        private void throwExceptionGUIThreadToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnThrowExceptionGUIThreadToolStripMenuItemClick(object sender, EventArgs e)
         {
             throw new Exception("This is a test exception thrown by the GUI thread");
         }
 
-        private void throwExceptionbackgroundThToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnThrowExceptionBackgroundThToolStripMenuItemClick(object sender, EventArgs e)
         {
-            ExceptionFx fx = throwExceptionFx;
+            ExceptionFx fx = ThrowExceptionFx;
             fx.BeginInvoke(null, null);
         }
 
-        private void throwExceptionbackgroundThreadToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnThrowExceptionBackgroundThreadToolStripMenuItemClick(object sender, EventArgs e)
         {
-            Thread thread = new Thread(throwExceptionThreadFx);
+            Thread thread = new Thread(ThrowExceptionThreadFx);
             thread.IsBackground = true;
             thread.Start();
         }
 
-        private void warnToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnWarnToolStripMenuItemClick(object sender, EventArgs e)
         {
             //_logger.GetLogger().LogLevel = _logger.Level.WARN;
         }
 
-        private void infoToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnInfoToolStripMenuItemClick(object sender, EventArgs e)
         {
             //_logger.Get_logger().LogLevel = _logger.Level.INFO;
         }
 
-        private void debugToolStripMenuItem1_Click(object sender, EventArgs e)
+        private void OnDebugToolStripMenuItemClick(object sender, EventArgs e)
         {
             //_logger.Get_logger().LogLevel = _logger.Level.DEBUG;
         }
 
-        private void loglevelToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnLogLevelToolStripMenuItemClick(object sender, EventArgs e)
         {
         }
 
-        private void loglevelToolStripMenuItem_DropDownOpening(object sender, EventArgs e)
+        private void OnLogLevelToolStripMenuItemDropDownOpening(object sender, EventArgs e)
         {
             //warnToolStripMenuItem.Checked = _logger.Get_logger().LogLevel == _logger.Level.WARN;
             //infoToolStripMenuItem.Checked = _logger.Get_logger().LogLevel == _logger.Level.INFO;
             //debugToolStripMenuItem1.Checked = _logger.Get_logger().LogLevel == _logger.Level.DEBUG;
         }
 
-        private void disableWordHighlightModeToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnDisableWordHighlightModeToolStripMenuItemClick(object sender, EventArgs e)
         {
             DebugOptions.disableWordHighlight = disableWordHighlightModeToolStripMenuItem.Checked;
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.RefreshAllGrids();
-            }
+            CurrentLogWindow?.RefreshAllGrids();
         }
 
-        private void multifileMaskToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnMultiFileMaskToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null)
-            {
-                CurrentLogWindow.ChangeMultifileMask();
-            }
+            CurrentLogWindow?.ChangeMultifileMask();
         }
 
-        private void toolStripMenuItem3_Click(object sender, EventArgs e)
+        private void OnMultiFileEnabledStripMenuItemClick(object sender, EventArgs e)
         {
             ToggleMultiFile();
         }
 
-        private void lockInstanceToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnLockInstanceToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (lockInstanceToolStripMenuItem.Checked)
-            {
-                StaticData.CurrentLockedMainWindow = null;
-            }
-            else
-            {
-                StaticData.CurrentLockedMainWindow = this;
-            }
+            StaticData.CurrentLockedMainWindow = lockInstanceToolStripMenuItem.Checked ? null : this;
         }
 
-        private void optionToolStripMenuItem_DropDownOpening(object sender, EventArgs e)
+        private void OnOptionToolStripMenuItemDropDownOpening(object sender, EventArgs e)
         {
             lockInstanceToolStripMenuItem.Enabled = !ConfigManager.Settings.preferences.allowOnlyOneInstance;
             lockInstanceToolStripMenuItem.Checked = StaticData.CurrentLockedMainWindow == this;
         }
 
-        private void toolStripMenuItem1_DropDownOpening(object sender, EventArgs e)
+        private void OnFileToolStripMenuItemDropDownOpening(object sender, EventArgs e)
         {
             newFromClipboardToolStripMenuItem.Enabled = Clipboard.ContainsText();
         }
 
-        private void newFromClipboardToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnNewFromClipboardToolStripMenuItemClick(object sender, EventArgs e)
         {
             PasteFromClipboard();
         }
 
-        private void openURIToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnOpenURIToolStripMenuItemClick(object sender, EventArgs e)
         {
             OpenUriDialog dlg = new OpenUriDialog();
             dlg.UriHistory = ConfigManager.Settings.uriHistoryList;
@@ -1116,30 +978,30 @@ namespace LogExpert
                 {
                     ConfigManager.Settings.uriHistoryList = dlg.UriHistory;
                     ConfigManager.Save(SettingsFlags.FileHistory);
-                    LoadFiles(new string[] {dlg.Uri}, false);
+                    LoadFiles(new[] {dlg.Uri}, false);
                 }
             }
         }
 
-        private void columnFinderToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnColumnFinderToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (CurrentLogWindow != null && !skipEvents)
+            if (CurrentLogWindow != null && !_skipEvents)
             {
                 CurrentLogWindow.ToggleColumnFinder(columnFinderToolStripMenuItem.Checked, true);
             }
         }
 
-        private void dockPanel_ActiveContentChanged(object sender, EventArgs e)
+        private void OnDockPanelActiveContentChanged(object sender, EventArgs e)
         {
-            if (dockPanel.ActiveContent is LogWindow)
+            if (dockPanel.ActiveContent is LogWindow.LogWindow window)
             {
-                CurrentLogWindow = dockPanel.ActiveContent as LogWindow;
+                CurrentLogWindow = window;
                 CurrentLogWindow.LogWindowActivated();
                 ConnectToolWindows(CurrentLogWindow);
             }
         }
 
-        private void tabRenameToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnTabRenameToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (CurrentLogWindow != null)
             {
