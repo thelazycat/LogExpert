@@ -31,6 +31,7 @@ Or Install via chocolatey
 ```choco install logexpert```
 
 Requirements
+- https://dotnet.microsoft.com/en-us/download/dotnet/8.0
 - .NET 8 (https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-8.0.13-windows-x64-installer or https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-8.0.13-windows-x86-installer) 
 - ASP.NET Core Runtime (https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-aspnetcore-8.0.13-windows-x64-installer, https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-aspnetcore-8.0.13-windows-x86-installer or https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-aspnetcore-8.0.13-windows-hosting-bundle-installer)
 
