@@ -745,7 +745,7 @@ namespace LogExpert.Controls.LogTabWindow
 
             int ledSize = 3;
             int ledGap = 1;
-            Rectangle lastLed = _leds[_leds.Length - 1];
+            Rectangle lastLed = _leds[^1];
             Rectangle dirtyLed = new(lastLed.Right + 2, lastLed.Bottom - ledSize, ledSize, ledSize);
             Rectangle tailLed = new(dirtyLed.Location, dirtyLed.Size);
             tailLed.Offset(0, -(ledSize + ledGap));
@@ -1196,7 +1196,7 @@ namespace LogExpert.Controls.LogTabWindow
                             CloseAllTabs();
                             break;
                         case ProjectLoadDlgResult.NewWindow:
-                            LogExpertProxy.NewWindow(new[] { projectFileName });
+                            LogExpertProxy.NewWindow([projectFileName]);
                             return;
                     }
                 }
@@ -1301,36 +1301,28 @@ namespace LogExpert.Controls.LogTabWindow
 
         private string SaveLayout()
         {
-            using (MemoryStream memStream = new(2000))
-            {
-                using (StreamReader r = new(memStream))
-                {
-                    dockPanel.SaveAsXml(memStream, Encoding.UTF8, true);
+            using MemoryStream memStream = new(2000);
+            using StreamReader r = new(memStream);
+            dockPanel.SaveAsXml(memStream, Encoding.UTF8, true);
 
-                    memStream.Seek(0, SeekOrigin.Begin);
-                    string resultXml = r.ReadToEnd();
+            memStream.Seek(0, SeekOrigin.Begin);
+            string resultXml = r.ReadToEnd();
 
-                    r.Close();
+            r.Close();
 
-                    return resultXml;
-                }
-            }
+            return resultXml;
         }
 
         private void RestoreLayout(string layoutXml)
         {
-            using (MemoryStream memStream = new(2000))
-            {
-                using (StreamWriter w = new(memStream))
-                {
-                    w.Write(layoutXml);
-                    w.Flush();
+            using MemoryStream memStream = new(2000);
+            using StreamWriter w = new(memStream);
+            w.Write(layoutXml);
+            w.Flush();
 
-                    memStream.Seek(0, SeekOrigin.Begin);
+            memStream.Seek(0, SeekOrigin.Begin);
 
-                    dockPanel.LoadFromXml(memStream, DeserializeDockContent, true);
-                }
-            }
+            dockPanel.LoadFromXml(memStream, DeserializeDockContent, true);
         }
 
         private IDockContent DeserializeDockContent(string persistString)

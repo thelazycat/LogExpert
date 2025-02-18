@@ -78,7 +78,7 @@ partial class Build : NukeBuild
                 patch = AppVeyor.Instance.BuildNumber;
             }
 
-            return new Version(1, 11, 0, patch);
+            return new Version(1, 11, 1, patch);
         }
     }
 
@@ -90,7 +90,7 @@ partial class Build : NukeBuild
     string VersionInformationString => $"{VersionString} {Configuration}";
 
     [Parameter("Version file string")]
-    string VersionFileString => $"{Version.Major}.{Version.Minor}.0";
+    string VersionFileString => $"{Version.Major}.{Version.Minor}.{Version.Build}";
 
     [Parameter("Exclude file globs")]
     string[] ExcludeFileGlob => ["**/*.xml", "**/*.XML", "**/*.pdb"];
