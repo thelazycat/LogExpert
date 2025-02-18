@@ -84,6 +84,8 @@ namespace LogExpert.Controls.LogTabWindow
             mainMenuStrip.Location = new Point(0, 0);
             externalToolsToolStrip.Location = new Point(0, 54);
 
+            ChangeTheme(Controls);
+
             _startupFileNames = fileNames;
             _instanceNumber = instanceNumber;
             _showInstanceNumbers = showInstanceNumbers;

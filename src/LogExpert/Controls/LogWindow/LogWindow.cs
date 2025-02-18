@@ -299,6 +299,12 @@ namespace LogExpert.Controls.LogWindow
             dataGridView.ColumnHeadersDefaultCellStyle.ForeColor = ColorMode.ForeColor;
             dataGridView.EnableHeadersVisualStyles = false;
 
+            // Filter dataGridView
+            filterGridView.BackgroundColor = ColorMode.DockBackgroundColor;
+            filterGridView.ColumnHeadersDefaultCellStyle.BackColor = ColorMode.BackgroundColor;
+            filterGridView.ColumnHeadersDefaultCellStyle.ForeColor = ColorMode.ForeColor;
+            filterGridView.EnableHeadersVisualStyles = false;
+
             // Colors for menu
             dataGridContextMenuStrip.Renderer = new ExtendedMenuStripRenderer();
             bookmarkContextMenuStrip.Renderer = new ExtendedMenuStripRenderer();
@@ -343,12 +349,6 @@ namespace LogExpert.Controls.LogWindow
                 item.BackColor = ColorMode.MenuBackgroundColor;
             }
 
-            // Filter dataGridView
-            filterGridView.BackgroundColor = ColorMode.DockBackgroundColor;
-            filterGridView.ColumnHeadersDefaultCellStyle.BackColor = ColorMode.BackgroundColor;
-            filterGridView.ColumnHeadersDefaultCellStyle.ForeColor = ColorMode.ForeColor;
-            filterGridView.EnableHeadersVisualStyles = false;
-
             // Colors for menu
             filterContextMenuStrip.Renderer = new ExtendedMenuStripRenderer();
 
@@ -362,7 +362,6 @@ namespace LogExpert.Controls.LogWindow
             #endregion DataGridView
 
             filterComboBox.BackColor = ColorMode.DockBackgroundColor;
-
         }
 
         #endregion

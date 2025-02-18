@@ -39,7 +39,7 @@ namespace LogExpert.Config
 
         public static void LoadColorMode()
         {
-            var preferences = Config.ConfigManager.Settings.preferences;
+            var preferences = ConfigManager.Settings.preferences;
 
             if (preferences.darkMode)
             {
