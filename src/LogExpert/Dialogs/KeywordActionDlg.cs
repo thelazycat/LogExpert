@@ -1,11 +1,9 @@
-﻿using System;
+﻿using LogExpert.Classes.Highlight;
+
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Text;
 using System.Windows.Forms;
-using LogExpert.Classes.Highlight;
 
 namespace LogExpert.Dialogs
 {
@@ -33,7 +31,7 @@ namespace LogExpert.Dialogs
         {
             _keywordActionList = actionList;
             ActionEntry = entry;
-            
+
             InitializeComponent();
 
             AutoScaleDimensions = new SizeF(96F, 96F);
@@ -49,9 +47,9 @@ namespace LogExpert.Dialogs
 
             if (actionComboBox.Items.Count > 0)
             {
-                if (ActionEntry.pluginName != null && _actionDict.ContainsKey(ActionEntry.pluginName))
+                if (ActionEntry.PluginName != null && _actionDict.ContainsKey(ActionEntry.PluginName))
                 {
-                    actionComboBox.SelectedItem = ActionEntry.pluginName;
+                    actionComboBox.SelectedItem = ActionEntry.PluginName;
                 }
                 else
                 {
@@ -59,7 +57,7 @@ namespace LogExpert.Dialogs
                 }
             }
 
-            parameterTextBox.Text = ActionEntry.actionParam;
+            parameterTextBox.Text = ActionEntry.ActionParam;
         }
 
         #endregion
@@ -74,17 +72,20 @@ namespace LogExpert.Dialogs
 
         private void OnOkButtonClick(object sender, EventArgs e)
         {
-            ActionEntry = new ActionEntry();
-            ActionEntry.actionParam = parameterTextBox.Text;
-            if (_actionDict.ContainsKey((string) actionComboBox.SelectedItem))
+            ActionEntry = new ActionEntry
             {
-                ActionEntry.pluginName = (string) actionComboBox.SelectedItem;
+                ActionParam = parameterTextBox.Text
+            };
+
+            if (_actionDict.ContainsKey((string)actionComboBox.SelectedItem))
+            {
+                ActionEntry.PluginName = (string)actionComboBox.SelectedItem;
             }
         }
 
-        private void actionComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void OnActionComboBoxSelectedIndexChanged(object sender, EventArgs e)
         {
-            commentTextBox.Text = _actionDict[(string) actionComboBox.SelectedItem].GetDescription();
+            commentTextBox.Text = _actionDict[(string)actionComboBox.SelectedItem].GetDescription();
         }
 
         #endregion

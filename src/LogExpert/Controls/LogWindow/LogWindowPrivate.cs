@@ -887,18 +887,21 @@ namespace LogExpert.Controls.LogWindow
 
         private void LaunchHighlightPlugins(IList<HilightEntry> matchingList, int lineNum)
         {
-            LogExpertCallback callback = new(this);
-            callback.LineNum = lineNum;
+            LogExpertCallback callback = new(this)
+            {
+                LineNum = lineNum
+            };
+
             foreach (HilightEntry entry in matchingList)
             {
-                if (entry.IsActionEntry && entry.ActionEntry.pluginName != null)
+                if (entry.IsActionEntry && entry.ActionEntry.PluginName != null)
                 {
                     IKeywordAction plugin =
-                        PluginRegistry.GetInstance().FindKeywordActionPluginByName(entry.ActionEntry.pluginName);
+                        PluginRegistry.GetInstance().FindKeywordActionPluginByName(entry.ActionEntry.PluginName);
                     if (plugin != null)
                     {
                         ActionPluginExecuteFx fx = plugin.Execute;
-                        fx.BeginInvoke(entry.SearchText, entry.ActionEntry.actionParam, callback,
+                        fx.BeginInvoke(entry.SearchText, entry.ActionEntry.ActionParam, callback,
                             CurrentColumnizer, null, null);
                     }
                 }
@@ -1116,12 +1119,9 @@ namespace LogExpert.Controls.LogWindow
             bool noBackgroundFill,
             HilightEntry groundEntry)
         {
-            IColumn column = e.Value as IColumn;
+            var column = e.Value as IColumn;
 
-            if (column == null)
-            {
-                column = Column.EmptyColumn;
-            }
+            column ??= Column.EmptyColumn;
 
             IList<HilightMatchEntry> matchList = FindHighlightMatches(column);
             // too many entries per line seem to cause problems with the GDI
@@ -1130,13 +1130,20 @@ namespace LogExpert.Controls.LogWindow
                 matchList.RemoveAt(50);
             }
 
-            HilightMatchEntry hme = new();
-            hme.StartPos = 0;
-            hme.Length = column.DisplayValue.Length;
-            hme.HilightEntry = new HilightEntry(column.DisplayValue,
-                groundEntry?.ForegroundColor ?? Color.FromKnownColor(KnownColor.Black),
-                groundEntry?.BackgroundColor ?? Color.Empty,
-                false);
+            var he = new HilightEntry
+            {
+                SearchText = column.DisplayValue,
+                ForegroundColor = groundEntry?.ForegroundColor ?? Color.FromKnownColor(KnownColor.Black),
+                BackgroundColor = groundEntry?.BackgroundColor ?? Color.Empty,
+                IsWordMatch = true
+            };
+
+            HilightMatchEntry hme = new()
+            {
+                StartPos = 0,
+                Length = column.DisplayValue.Length,
+                HilightEntry = he
+            };
 
             if (groundEntry != null)
             {
@@ -1202,9 +1209,9 @@ namespace LogExpert.Controls.LogWindow
                     }
                 }
 
-                if (foreColor == System.Drawing.Color.Black)
+                if (foreColor == Color.Black)
                 {
-                    foreColor = LogExpert.Config.ColorMode.ForeColor;
+                    foreColor = ColorMode.ForeColor;
                 }
 
                 TextRenderer.DrawText(e.Graphics, matchWord, font, wordRect,
@@ -1253,40 +1260,47 @@ namespace LogExpert.Controls.LogWindow
             }
 
             // collect areas with same hilight entry and build new highlight match entries for it
-            IList<HilightMatchEntry> mergedList = new List<HilightMatchEntry>();
+            IList<HilightMatchEntry> mergedList = [];
+
             if (entryArray.Length > 0)
             {
                 HilightEntry currentEntry = entryArray[0];
                 int lastStartPos = 0;
                 int pos = 0;
+
                 for (; pos < entryArray.Length; ++pos)
                 {
                     if (entryArray[pos] != currentEntry)
                     {
-                        HilightMatchEntry me = new();
-                        me.StartPos = lastStartPos;
-                        me.Length = pos - lastStartPos;
-                        me.HilightEntry = currentEntry;
+                        HilightMatchEntry me = new()
+                        {
+                            StartPos = lastStartPos,
+                            Length = pos - lastStartPos,
+                            HilightEntry = currentEntry
+                        };
+
                         mergedList.Add(me);
                         currentEntry = entryArray[pos];
                         lastStartPos = pos;
                     }
                 }
 
-                HilightMatchEntry me2 = new();
-                me2.StartPos = lastStartPos;
-                me2.Length = pos - lastStartPos;
-                me2.HilightEntry = currentEntry;
+                HilightMatchEntry me2 = new()
+                {
+                    StartPos = lastStartPos,
+                    Length = pos - lastStartPos,
+                    HilightEntry = currentEntry
+                };
+
                 mergedList.Add(me2);
             }
 
             return mergedList;
         }
 
-        /**
-       * Returns the first HilightEntry that matches the given line
-       */
-
+        /// <summary>
+        /// Returns the first HilightEntry that matches the given line
+        /// </summary>
         private HilightEntry FindHilightEntry(ITextValue line)
         {
             return FindHighlightEntry(line, false);
@@ -1328,13 +1342,12 @@ namespace LogExpert.Controls.LogWindow
             return false;
         }
 
-        /**
-       * Returns all HilightEntry entries which matches the given line
-       */
-
+        /// <summary>
+        /// Returns all HilightEntry entries which matches the given line
+        /// </summary>
         private IList<HilightEntry> FindMatchingHilightEntries(ITextValue line)
         {
-            IList<HilightEntry> resultList = new List<HilightEntry>();
+            IList<HilightEntry> resultList = [];
             if (line != null)
             {
                 lock (_currentHighlightGroupLock)
@@ -2132,7 +2145,7 @@ namespace LogExpert.Controls.LogWindow
         /// <returns></returns>
         private IList<int> GetAdditionalFilterResults(FilterParams filterParams, int lineNum, IList<int> checkList)
         {
-            IList<int> resultList = new List<int>();
+            IList<int> resultList = [];
             //string textLine = this.logFileReader.GetLogLine(lineNum);
             //ColumnizerCallback callback = new ColumnizerCallback(this);
             //callback.LineNum = lineNum;
@@ -2804,7 +2817,7 @@ namespace LogExpert.Controls.LogWindow
 
             ColumnizerCallback callback = new(this);
             callback.LineNum = lineNum;
-            IList<FilterPipe> deleteList = new List<FilterPipe>();
+            IList<FilterPipe> deleteList = [];
             lock (_filterPipeList)
             {
                 foreach (FilterPipe pipe in _filterPipeList)
@@ -2943,7 +2956,7 @@ namespace LogExpert.Controls.LogWindow
                 return lineNumList;
             }
 
-            return new List<int>();
+            return [];
         }
 
         /* ========================================================================
@@ -3658,17 +3671,22 @@ namespace LogExpert.Controls.LogWindow
 
         private void AddSearchHitHighlightEntry(SearchParams para)
         {
-            HilightEntry he = new(para.searchText,
-                Color.Red, Color.Yellow,
-                para.isRegex,
-                para.isCaseSensitive,
-                false,
-                false,
-                false,
-                false,
-                null,
-                true);
-            he.IsSearchHit = true;
+            HilightEntry he = new()
+            {
+                SearchText = para.searchText,
+                ForegroundColor = Color.Red,
+                BackgroundColor = Color.Yellow,
+                IsRegEx = para.isRegex,
+                IsCaseSensitive = para.isCaseSensitive,
+                IsLedSwitch = false,
+                IsStopTail = false,
+                IsSetBookmark = false,
+                IsActionEntry = false,
+                ActionEntry = null,
+                IsWordMatch = true,
+                IsSearchHit = true
+            };
+
             lock (_tempHighlightEntryListLock)
             {
                 _tempHighlightEntryList.Add(he);

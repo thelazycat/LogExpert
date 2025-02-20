@@ -328,12 +328,14 @@ namespace LogExpert.Controls.LogTabWindow
 
         private void ShowHighlightSettingsDialog()
         {
-            HighlightDialog dlg = new();
-            dlg.KeywordActionList = PluginRegistry.GetInstance().RegisteredKeywordActions;
-            dlg.Owner = this;
-            dlg.TopMost = TopMost;
-            dlg.HighlightGroupList = HilightGroupList;
-            dlg.PreSelectedGroupName = groupsComboBoxHighlightGroups.Text;
+            HighlightDialog dlg = new()
+            {
+                KeywordActionList = PluginRegistry.GetInstance().RegisteredKeywordActions,
+                Owner = this,
+                TopMost = TopMost,
+                HighlightGroupList = HilightGroupList,
+                PreSelectedGroupName = groupsComboBoxHighlightGroups.Text
+            };
 
             DialogResult res = dlg.ShowDialog();
 
