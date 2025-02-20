@@ -1,13 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Windows.Forms;
-using LogExpert.Classes.Highlight;
+﻿using LogExpert.Classes.Highlight;
 using LogExpert.Config;
 using LogExpert.Dialogs;
 using LogExpert.Entities;
 using LogExpert.Interface;
+
 using NLog;
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Windows.Forms;
 
 namespace LogExpert.Classes
 {
@@ -17,6 +19,7 @@ namespace LogExpert.Classes
 
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
+        //TODO Make configurable
         private Color _bookmarkColor = Color.FromArgb(165, 200, 225);
 
         #endregion
@@ -169,7 +172,7 @@ namespace LogExpert.Classes
             }
             catch (ArgumentOutOfRangeException ae)
             {
-                // Occures sometimes on empty gridViews (no lines) if bookmark window was closed and re-opened in floating mode. 
+                // Occures sometimes on empty gridViews (no lines) if bookmark window was closed and re-opened in floating mode.
                 // Don't know why.
                 _logger.Error(ae);
             }
@@ -230,7 +233,7 @@ namespace LogExpert.Classes
                 }
                 else
                 {
-                    // Workaround for a .NET bug which brings the DataGridView into an unstable state (causing lots of NullReferenceExceptions). 
+                    // Workaround for a .NET bug which brings the DataGridView into an unstable state (causing lots of NullReferenceExceptions).
                     dataGridView.FirstDisplayedScrollingColumnIndex = 0;
 
                     dataGridView.Columns[dataGridView.Columns.Count - 1].MinimumWidth = 5; // default
@@ -292,13 +295,12 @@ namespace LogExpert.Classes
             PaintHighlightedCell(logPaintCtx, e, gridView, noBackgroundFill, groundEntry);
         }
 
-
         private static void PaintHighlightedCell(ILogPaintContext logPaintCtx, DataGridViewCellPaintingEventArgs e, DataGridView gridView, bool noBackgroundFill, HilightEntry groundEntry)
         {
             object value = e.Value ?? string.Empty;
-            
+
             IList<HilightMatchEntry> matchList = logPaintCtx.FindHighlightMatches(value as ILogLine);
-            // too many entries per line seem to cause problems with the GDI 
+            // too many entries per line seem to cause problems with the GDI
             while (matchList.Count > 50)
             {
                 matchList.RemoveAt(50);
@@ -311,7 +313,23 @@ namespace LogExpert.Classes
                     HilightMatchEntry hme = new();
                     hme.StartPos = 0;
                     hme.Length = column.FullValue.Length;
-                    hme.HilightEntry = new HilightEntry(column.FullValue, groundEntry?.ForegroundColor ?? LogExpert.Config.ColorMode.ForeColor, groundEntry?.BackgroundColor ?? Color.Empty, false);
+
+                    var he = new HilightEntry
+                    {
+                        SearchText = column.FullValue,
+                        ForegroundColor = groundEntry?.ForegroundColor ?? ColorMode.ForeColor,
+                        BackgroundColor = groundEntry?.BackgroundColor ?? Color.Empty,
+                        IsRegEx = false,
+                        IsCaseSensitive = false,
+                        IsLedSwitch = false,
+                        IsStopTail = false,
+                        IsSetBookmark = false,
+                        IsActionEntry = false,
+                        IsWordMatch = false
+                    };
+
+                    hme.HilightEntry = he;
+
                     matchList = MergeHighlightMatchEntries(matchList, hme);
                 }
             }
@@ -398,9 +416,9 @@ namespace LogExpert.Classes
 
 
         /// <summary>
-        /// Builds a list of HilightMatchEntry objects. A HilightMatchEntry spans over a region that is painted with the same foreground and 
+        /// Builds a list of HilightMatchEntry objects. A HilightMatchEntry spans over a region that is painted with the same foreground and
         /// background colors.
-        /// All regions which don't match a word-mode entry will be painted with the colors of a default entry (groundEntry). This is either the 
+        /// All regions which don't match a word-mode entry will be painted with the colors of a default entry (groundEntry). This is either the
         /// first matching non-word-mode highlight entry or a black-on-white default (if no matching entry was found).
         /// </summary>
         /// <param name="matchList">List of all highlight matches for the current cell</param>

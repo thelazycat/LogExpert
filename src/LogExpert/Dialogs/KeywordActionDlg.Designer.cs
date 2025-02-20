@@ -46,7 +46,7 @@
             this.actionComboBox.Name = "actionComboBox";
             this.actionComboBox.Size = new System.Drawing.Size(329, 28);
             this.actionComboBox.TabIndex = 0;
-            this.actionComboBox.SelectedIndexChanged += new System.EventHandler(this.actionComboBox_SelectedIndexChanged);
+            this.actionComboBox.SelectedIndexChanged += new System.EventHandler(this.OnActionComboBoxSelectedIndexChanged);
             // 
             // label1
             // 

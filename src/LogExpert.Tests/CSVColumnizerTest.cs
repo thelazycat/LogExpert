@@ -14,9 +14,9 @@ namespace LogExpert.Tests
         [TestCase(@".\TestData\people-10000.csv", new[] {"Index","User Id","First Name","Last Name","Sex","Email","Phone","Date of birth","Job Title"})]
         public void Instantiat_CSVFile_BuildCorrectColumnizer(string filename, string[] expectedHeaders)
         {
-            CsvColumnizer.CsvColumnizer csvColumnizer = new CsvColumnizer.CsvColumnizer();
+            CsvColumnizer.CsvColumnizer csvColumnizer = new();
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, filename);
-            LogfileReader reader = new LogfileReader(path, new EncodingOptions(), true, 40, 50, new MultiFileOptions());
+            LogfileReader reader = new(path, new EncodingOptions(), true, 40, 50, new MultiFileOptions());
             reader.ReadFiles();
             ILogLine line = reader.GetLogLine(0);
             IColumnizedLogLine logline = new ColumnizedLogLine();

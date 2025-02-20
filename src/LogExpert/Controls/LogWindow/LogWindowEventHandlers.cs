@@ -1180,7 +1180,20 @@ namespace LogExpert.Controls.LogWindow
         {
             if (dataGridView.EditingControl is DataGridViewTextBoxEditingControl ctl)
             {
-                HilightEntry he = new(ctl.SelectedText, Color.Red, Color.Yellow, false, true, false, false, false, false, null, false);
+                var he = new HilightEntry()
+                {
+                    SearchText = ctl.SelectedText,
+                    ForegroundColor = Color.Red,
+                    BackgroundColor = Color.Yellow,
+                    IsRegEx = false,
+                    IsCaseSensitive = true,
+                    IsLedSwitch = false,
+                    IsSetBookmark = false,
+                    IsActionEntry = false,
+                    ActionEntry = null,
+                    IsWordMatch = false
+                };
+
                 lock (_tempHighlightEntryListLock)
                 {
                     _tempHighlightEntryList.Add(he);
@@ -1196,7 +1209,21 @@ namespace LogExpert.Controls.LogWindow
         {
             if (dataGridView.EditingControl is DataGridViewTextBoxEditingControl ctl)
             {
-                HilightEntry he = new(ctl.SelectedText, Color.Red, Color.Yellow, false, true, false, false, false, false, null, true);
+                HilightEntry he = new()
+                {
+                    SearchText = ctl.SelectedText,
+                    ForegroundColor = Color.Red,
+                    BackgroundColor = Color.Yellow,
+                    IsRegEx = false,
+                    IsCaseSensitive = true,
+                    IsLedSwitch = false,
+                    IsStopTail = false,
+                    IsSetBookmark = false,
+                    IsActionEntry = false,
+                    ActionEntry = null,
+                    IsWordMatch = true
+                };
+
                 lock (_tempHighlightEntryListLock)
                 {
                     _tempHighlightEntryList.Add(he);

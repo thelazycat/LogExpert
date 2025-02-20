@@ -1,15 +1,16 @@
-﻿using System;
+﻿using LogExpert.Classes.Highlight;
+using LogExpert.Config;
+using LogExpert.Entities;
+
+using NLog;
+
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
-using LogExpert.Classes;
-using LogExpert.Classes.Highlight;
-using LogExpert.Config;
-using LogExpert.Entities;
-using NLog;
 
 namespace LogExpert.Dialogs
 {
@@ -35,7 +36,6 @@ namespace LogExpert.Dialogs
 
             AutoScaleDimensions = new SizeF(96F, 96F);
             AutoScaleMode = AutoScaleMode.Dpi;
-
             Load += OnHighlightDialogLoad;
             listBoxHighlight.DrawItem += OnHighlightListBoxDrawItem;
             _applyButtonImage = btnApply.Image;
@@ -49,7 +49,15 @@ namespace LogExpert.Dialogs
         public List<HilightGroup> HighlightGroupList
         {
             get => _highlightGroupList;
-            set => _highlightGroupList = ObjectClone.Clone(value);
+            set
+            {
+                _highlightGroupList ??= [];
+
+                foreach (var group in value)
+                {
+                    _highlightGroupList.Add((HilightGroup)group.Clone());
+                }
+            }
         }
 
         public IList<IKeywordAction> KeywordActionList { get; set; }
@@ -88,8 +96,9 @@ namespace LogExpert.Dialogs
         {
             if (comboBoxGroups.SelectedIndex >= 0 && comboBoxGroups.SelectedIndex < HighlightGroupList.Count)
             {
-                HilightGroup newGroup = ObjectClone.Clone(HighlightGroupList[comboBoxGroups.SelectedIndex]);
+                HilightGroup newGroup = (HilightGroup)HighlightGroupList[comboBoxGroups.SelectedIndex].Clone();
                 newGroup.GroupName = "Copy of " + newGroup.GroupName;
+
                 HighlightGroupList.Add(newGroup);
                 FillGroupComboBox();
                 SelectGroup(HighlightGroupList.Count - 1);
@@ -226,6 +235,7 @@ namespace LogExpert.Dialogs
         private void OnBtnMoveDownClick(object sender, EventArgs e)
         {
             int index = listBoxHighlight.SelectedIndex;
+
             if (index > -1 && index < listBoxHighlight.Items.Count - 1)
             {
                 object item = listBoxHighlight.SelectedItem;
@@ -258,8 +268,8 @@ namespace LogExpert.Dialogs
             int i = 1;
             while (!uniqueName)
             {
-                uniqueName = HighlightGroupList.FindIndex(delegate(HilightGroup g) { return g.GroupName == name; }) <
-                             0;
+                uniqueName = HighlightGroupList.FindIndex(delegate (HilightGroup g) { return g.GroupName == name; }) < 0;
+
                 if (!uniqueName)
                 {
                     name = $"{baseName} #{i++}";
@@ -436,22 +446,23 @@ namespace LogExpert.Dialogs
                 {
                     CheckRegex();
 
-                    // Create a new entry
-                    HilightEntry entry = new(
-                        textBoxSearchString.Text,
-                        colorBoxForeground.SelectedColor,
-                        colorBoxBackground.SelectedColor,
-                        checkBoxRegex.Checked,
-                        checkBoxCaseSensitive.Checked,
-                        checkBoxDontDirtyLed.Checked,
-                        checkBoxStopTail.Checked,
-                        checkBoxBookmark.Checked,
-                        checkBoxPlugin.Checked,
-                        _currentActionEntry,
-                        checkBoxWordMatch.Checked);
+                    HilightEntry entry = new()
+                    {
+                        SearchText = textBoxSearchString.Text,
+                        ForegroundColor = colorBoxForeground.SelectedColor,
+                        BackgroundColor = colorBoxBackground.SelectedColor,
+                        IsRegEx = checkBoxRegex.Checked,
+                        IsCaseSensitive = checkBoxCaseSensitive.Checked,
+                        IsLedSwitch = checkBoxDontDirtyLed.Checked,
+                        IsStopTail = checkBoxStopTail.Checked,
+                        IsSetBookmark = checkBoxBookmark.Checked,
+                        IsActionEntry = checkBoxPlugin.Checked,
+                        ActionEntry = _currentActionEntry,
+                        IsWordMatch = checkBoxWordMatch.Checked,
+                        IsBold = checkBoxBold.Checked,
+                        NoBackground = checkBoxNoBackground.Checked
+                    };
 
-                    entry.IsBold = checkBoxBold.Checked;
-                    entry.NoBackground = checkBoxNoBackground.Checked;
                     listBoxHighlight.Items.Add(entry);
 
                     // Select the newly created item
@@ -539,10 +550,7 @@ namespace LogExpert.Dialogs
         private void InitData()
         {
             const string def = "[Default]";
-            if (HighlightGroupList == null)
-            {
-                HighlightGroupList = [];
-            }
+            HighlightGroupList ??= [];
 
             if (HighlightGroupList.Count == 0)
             {
@@ -626,7 +634,7 @@ namespace LogExpert.Dialogs
                 entry.IsSetBookmark = checkBoxBookmark.Checked;
                 entry.IsStopTail = checkBoxStopTail.Checked;
                 entry.IsActionEntry = checkBoxPlugin.Checked;
-                entry.ActionEntry = _currentActionEntry.Copy();
+                entry.ActionEntry = (ActionEntry)_currentActionEntry.Clone();
                 entry.BookmarkComment = _bookmarkComment;
                 entry.IsWordMatch = checkBoxWordMatch.Checked;
                 entry.IsBold = checkBoxBold.Checked;
@@ -698,7 +706,7 @@ namespace LogExpert.Dialogs
                 checkBoxPlugin.Checked = entry.IsActionEntry;
                 btnSelectPlugin.Enabled = checkBoxPlugin.Checked;
                 btnBookmarkComment.Enabled = checkBoxBookmark.Checked;
-                _currentActionEntry = entry.ActionEntry != null ? entry.ActionEntry.Copy() : new ActionEntry();
+                _currentActionEntry = entry.ActionEntry != null ? (ActionEntry)entry.ActionEntry.Clone() : new ActionEntry();
                 _bookmarkComment = entry.BookmarkComment;
                 checkBoxWordMatch.Checked = entry.IsWordMatch;
                 checkBoxBold.Checked = entry.IsBold;

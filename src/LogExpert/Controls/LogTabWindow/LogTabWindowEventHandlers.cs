@@ -1,4 +1,11 @@
-﻿using System;
+﻿using LogExpert.Classes;
+using LogExpert.Classes.Persister;
+using LogExpert.Config;
+using LogExpert.Dialogs;
+using LogExpert.Entities;
+using LogExpert.Entities.EventArgs;
+
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -6,12 +13,7 @@ using System.Drawing;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using LogExpert.Classes;
-using LogExpert.Classes.Persister;
-using LogExpert.Config;
-using LogExpert.Dialogs;
-using LogExpert.Entities;
-using LogExpert.Entities.EventArgs;
+
 using WeifenLuo.WinFormsUI.Docking;
 
 namespace LogExpert.Controls.LogTabWindow
@@ -134,14 +136,14 @@ namespace LogExpert.Controls.LogTabWindow
         private void OnLogWindowDisposed(object sender, EventArgs e)
         {
             LogWindow.LogWindow logWindow = sender as LogWindow.LogWindow;
-            
+
             if (sender == CurrentLogWindow)
             {
                 ChangeCurrentLogWindow(null);
             }
-            
+
             RemoveLogWindow(logWindow);
-            
+
             logWindow.Tag = null;
         }
 
@@ -162,7 +164,7 @@ namespace LogExpert.Controls.LogTabWindow
             form.Owner = this;
             form.TopMost = TopMost;
             DialogResult res = form.ShowDialog();
-            
+
             if (res == DialogResult.OK)
             {
                 if (form.ApplyToAll)
@@ -285,7 +287,7 @@ namespace LogExpert.Controls.LogTabWindow
                 s += format;
                 s += " , ";
             }
-            s = s.Substring(0, s.Length - 3);
+            s = s[..^3];
             _logger.Debug(s);
 #endif
 
@@ -317,7 +319,7 @@ namespace LogExpert.Controls.LogTabWindow
             aboutBox.TopMost = TopMost;
             aboutBox.ShowDialog();
         }
-        
+
         private void OnFilterToolStripMenuItemClick(object sender, EventArgs e)
         {
             CurrentLogWindow?.ToggleFilterPanel();
@@ -373,7 +375,7 @@ namespace LogExpert.Controls.LogTabWindow
         {
             CurrentLogWindow?.FollowTailChanged(checkBoxFollowTail.Checked, false);
         }
-        
+
         private void OnLogTabWindowKeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.W && e.Control)
@@ -434,7 +436,7 @@ namespace LogExpert.Controls.LogTabWindow
                     return;
                 }
 
-                if (((LogWindow.LogWindow) sender).Tag is LogWindowData data)
+                if (((LogWindow.LogWindow)sender).Tag is LogWindowData data)
                 {
                     lock (data)
                     {
@@ -453,7 +455,7 @@ namespace LogExpert.Controls.LogTabWindow
                         data.dirty = true;
                     }
                     Icon icon = GetIcon(diff, data);
-                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow) sender, icon);
+                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow)sender, icon);
                 }
             }
         }
@@ -500,10 +502,10 @@ namespace LogExpert.Controls.LogTabWindow
             {
                 if (dockPanel.ActiveContent == sender)
                 {
-                    LogWindowData data = ((LogWindow.LogWindow) sender).Tag as LogWindowData;
+                    LogWindowData data = ((LogWindow.LogWindow)sender).Tag as LogWindowData;
                     data.dirty = false;
                     Icon icon = GetIcon(data.diffSum, data);
-                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow) sender, icon);
+                    BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow)sender, icon);
                 }
             }
         }
@@ -512,10 +514,10 @@ namespace LogExpert.Controls.LogTabWindow
         {
             if (!Disposing)
             {
-                LogWindowData data = ((LogWindow.LogWindow) sender).Tag as LogWindowData;
+                LogWindowData data = ((LogWindow.LogWindow)sender).Tag as LogWindowData;
                 data.syncMode = e.IsTimeSynced ? 1 : 0;
                 Icon icon = GetIcon(data.diffSum, data);
-                BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow) sender, icon);
+                BeginInvoke(new SetTabIconDelegate(SetTabIcon), (LogWindow.LogWindow)sender, icon);
             }
             else
             {
@@ -601,7 +603,7 @@ namespace LogExpert.Controls.LogTabWindow
         {
             CurrentLogWindow?.AppFocusGained();
         }
-        
+
         private void OnShowBookmarkListToolStripMenuItemClick(object sender, EventArgs e)
         {
             if (_bookmarkWindow.Visible)
@@ -707,7 +709,7 @@ namespace LogExpert.Controls.LogTabWindow
             LogWindow.LogWindow logWindow = dockPanel.ActiveContent as LogWindow.LogWindow;
 
             LogWindowData data = logWindow.Tag as LogWindowData;
-            
+
             if (data == null)
             {
                 return;
@@ -749,7 +751,7 @@ namespace LogExpert.Controls.LogTabWindow
                 _wasMaximized = WindowState == FormWindowState.Maximized;
             }
         }
-        
+
         private void OnSaveProjectToolStripMenuItemClick(object sender, EventArgs e)
         {
             SaveFileDialog dlg = new();
@@ -786,7 +788,7 @@ namespace LogExpert.Controls.LogTabWindow
             OpenFileDialog dlg = new();
             dlg.DefaultExt = "lxj";
             dlg.Filter = @"LogExpert sessions (*.lxj)|*.lxj";
-            
+
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 string projectFileName = dlg.FileName;
@@ -823,7 +825,7 @@ namespace LogExpert.Controls.LogTabWindow
         {
             CurrentLogWindow?.ExportBookmarkList();
         }
-        
+
         private void OnHighlightGroupsComboBoxDropDownClosed(object sender, EventArgs e)
         {
             ApplySelectedHighlightGroup();
@@ -985,7 +987,7 @@ namespace LogExpert.Controls.LogTabWindow
                 {
                     ConfigManager.Settings.uriHistoryList = dlg.UriHistory;
                     ConfigManager.Save(SettingsFlags.FileHistory);
-                    LoadFiles(new[] {dlg.Uri}, false);
+                    LoadFiles(new[] { dlg.Uri }, false);
                 }
             }
         }

@@ -13,7 +13,7 @@ namespace LogExpert.Tests
         [TestCase("*$J(.)", 66)]
         public void TestFilenameListWithAppendedIndex(string format, int retries)
         {
-            MultiFileOptions options = new MultiFileOptions();
+            MultiFileOptions options = new();
             options.FormatPattern = format;
             options.MaxDayTry = retries;
 
@@ -22,7 +22,7 @@ namespace LogExpert.Tests
             string firstFile = files.Last.Value;
             
             ILogFileInfo info = new LogFileInfo(new Uri(firstFile));
-            RolloverFilenameHandler handler = new RolloverFilenameHandler(info, options);
+            RolloverFilenameHandler handler = new(info, options);
             LinkedList<string> fileList = handler.GetNameList();
 
             Assert.That(fileList, Is.EqualTo(files));
@@ -34,7 +34,7 @@ namespace LogExpert.Tests
         [TestCase("*$D(YYYY-mm-DD)_$I.log", 3)]
         public void TestFilenameListWithDate(string format, int retries)
         {
-            MultiFileOptions options = new MultiFileOptions();
+            MultiFileOptions options = new();
             options.FormatPattern = format;
             options.MaxDayTry = retries;
 
@@ -43,7 +43,7 @@ namespace LogExpert.Tests
             string firstFile = files.Last.Value;
             
             ILogFileInfo info = new LogFileInfo(new Uri(firstFile));
-            RolloverFilenameHandler handler = new RolloverFilenameHandler(info, options);
+            RolloverFilenameHandler handler = new(info, options);
             LinkedList<string> fileList = handler.GetNameList();
 
             Assert.That(fileList, Is.EqualTo(files));

@@ -89,8 +89,8 @@ namespace LogExpert.Tests
 
         static string RemoveCharacters(string input, string charsToRemove)
         {
-            HashSet<char> charsToRemoveSet = new HashSet<char>(charsToRemove);
-            StringBuilder result = new StringBuilder();
+            HashSet<char> charsToRemoveSet = new(charsToRemove);
+            StringBuilder result = new();
 
             foreach (char c in input)
             {
