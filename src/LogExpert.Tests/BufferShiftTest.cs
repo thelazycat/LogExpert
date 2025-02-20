@@ -1,7 +1,10 @@
 ﻿using LogExpert.Classes.Log;
 using LogExpert.Entities;
+
 using NUnit.Framework;
+
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace LogExpert.Tests
@@ -26,13 +29,17 @@ namespace LogExpert.Tests
         public void TestShiftBuffers1()
         {
             int linesPerFile = 10;
-            MultiFileOptions options = new MultiFileOptions();
-            options.MaxDayTry = 0;
-            options.FormatPattern = "*$J(.)";
+            MultiFileOptions options = new()
+            {
+                MaxDayTry = 0,
+                FormatPattern = "*$J(.)"
+            };
             LinkedList<string> files = CreateTestFilesWithoutDate();
-            EncodingOptions encodingOptions = new EncodingOptions();
-            encodingOptions.Encoding = Encoding.Default;
-            LogfileReader reader = new LogfileReader(files.Last.Value, encodingOptions, true, 40, 50, options);
+            EncodingOptions encodingOptions = new()
+            {
+                Encoding = Encoding.Default
+            };
+            LogfileReader reader = new(files.Last.Value, encodingOptions, true, 40, 50, options);
             reader.ReadFiles();
 
             IList<ILogFileInfo> lil = reader.GetLogFileInfoList();
@@ -40,7 +47,8 @@ namespace LogExpert.Tests
 
             LinkedList<string>.Enumerator enumerator = files.GetEnumerator();
             enumerator.MoveNext();
-            foreach (LogFileInfo li in lil)
+
+            foreach (LogFileInfo li in lil.Cast<LogFileInfo>())
             {
                 string fileName = enumerator.Current;
                 Assert.That(li.FullName, Is.EqualTo(fileName));
@@ -52,7 +60,7 @@ namespace LogExpert.Tests
             //
             files = RolloverSimulation(files, "*$J(.)", false);
 
-            // Simulate rollover detection 
+            // Simulate rollover detection
             //
             reader.ShiftBuffers();
 
@@ -73,7 +81,7 @@ namespace LogExpert.Tests
                 enumerator.MoveNext();
             }
 
-            // Check if file buffers have correct files. Assuming here that one buffer fits for a 
+            // Check if file buffers have correct files. Assuming here that one buffer fits for a
             // complete file
             //
             enumerator = files.GetEnumerator();
@@ -117,7 +125,7 @@ namespace LogExpert.Tests
             //
             files = RolloverSimulation(files, "*$J(.)", true);
 
-            // Simulate rollover detection 
+            // Simulate rollover detection
             //
             reader.ShiftBuffers();
             lil = reader.GetLogFileInfoList();

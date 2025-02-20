@@ -24,7 +24,7 @@ namespace LogExpert.Tests
         {
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test");
 
-            Mock<IAutoLogLineColumnizerCallback> autoLogLineColumnizerCallbackMock = new Mock<IAutoLogLineColumnizerCallback>();
+            Mock<IAutoLogLineColumnizerCallback> autoLogLineColumnizerCallbackMock = new();
 
             autoLogLineColumnizerCallbackMock.Setup(a => a.GetLogLine(0)).Returns(new TestLogLine()
             {
@@ -67,10 +67,10 @@ namespace LogExpert.Tests
             string fileName, Type columnizerType)
         {
             string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
-            LogfileReader reader = new LogfileReader(path, new EncodingOptions(), true, 40, 50, new MultiFileOptions());
+            LogfileReader reader = new(path, new EncodingOptions(), true, 40, 50, new MultiFileOptions());
             reader.ReadFiles();
 
-            Mock<ILogLineColumnizer> autoColumnizer = new Mock<ILogLineColumnizer>();
+            Mock<ILogLineColumnizer> autoColumnizer = new();
             autoColumnizer.Setup(a => a.GetName()).Returns("Auto Columnizer");
 
             // TODO: When DI container is ready, we can mock this set up.
