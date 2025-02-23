@@ -160,7 +160,7 @@ namespace LogExpert.Controls.LogWindow
             ForcePersistenceLoading = forcePersistenceLoading;
 
             dataGridView.CellValueNeeded += OnDataGridViewCellValueNeeded;
-            dataGridView.CellPainting += OnDataGridView_CellPainting;
+            dataGridView.CellPainting += OnDataGridViewCellPainting;
 
             filterGridView.CellValueNeeded += OnFilterGridViewCellValueNeeded;
             filterGridView.CellPainting += OnFilterGridViewCellPainting;
@@ -561,10 +561,13 @@ namespace LogExpert.Controls.LogWindow
 
         internal void ChangeMultifileMask()
         {
-            MultiFileMaskDialog dlg = new(this, FileName);
-            dlg.Owner = this;
-            dlg.MaxDays = _multiFileOptions.MaxDayTry;
-            dlg.FileNamePattern = _multiFileOptions.FormatPattern;
+            MultiFileMaskDialog dlg = new(this, FileName)
+            {
+                Owner = this,
+                MaxDays = _multiFileOptions.MaxDayTry,
+                FileNamePattern = _multiFileOptions.FormatPattern
+            };
+
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 _multiFileOptions.FormatPattern = dlg.FileNamePattern;
@@ -579,6 +582,7 @@ namespace LogExpert.Controls.LogWindow
         internal void ToggleColumnFinder(bool show, bool setFocus)
         {
             _guiStateArgs.ColumnFinderVisible = show;
+
             if (show)
             {
                 columnComboBox.AutoCompleteMode = AutoCompleteMode.Suggest;
@@ -646,7 +650,7 @@ namespace LogExpert.Controls.LogWindow
 
         private delegate void PositionAfterReloadFx(ReloadMemento reloadMemento);
 
-        private delegate void AutoResizeColumnsFx(DataGridView gridView);
+        private delegate void AutoResizeColumnsFx(BufferedDataGridView gridView);
 
         private delegate bool BoolReturnDelegate();
 

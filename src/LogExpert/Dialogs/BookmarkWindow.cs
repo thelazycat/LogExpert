@@ -1,13 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Windows.Forms;
-using LogExpert.Classes;
+﻿using LogExpert.Classes;
 using LogExpert.Config;
 using LogExpert.Entities;
 using LogExpert.Extensions.Forms;
 using LogExpert.Interface;
+
 using NLog;
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Windows.Forms;
+
 using WeifenLuo.WinFormsUI.Docking;
 
 namespace LogExpert.Dialogs
@@ -61,7 +64,7 @@ namespace LogExpert.Dialogs
                 }
 
             }
-            #endregion            
+            #endregion
 
             #region DataGridView
 
@@ -71,7 +74,7 @@ namespace LogExpert.Dialogs
             bookmarkDataGridView.BackgroundColor = LogExpert.Config.ColorMode.DockBackgroundColor;
             bookmarkDataGridView.ColumnHeadersDefaultCellStyle.BackColor = LogExpert.Config.ColorMode.BackgroundColor;
             bookmarkDataGridView.ColumnHeadersDefaultCellStyle.ForeColor = LogExpert.Config.ColorMode.ForeColor;
-            bookmarkDataGridView.EnableHeadersVisualStyles = false;            
+            bookmarkDataGridView.EnableHeadersVisualStyles = false;
 
             // Colors for menu
             contextMenuStrip1.Renderer = new ExtendedMenuStripRenderer();
@@ -81,7 +84,7 @@ namespace LogExpert.Dialogs
                 var item = contextMenuStrip1.Items[y];
                 item.ForeColor = LogExpert.Config.ColorMode.ForeColor;
                 item.BackColor = LogExpert.Config.ColorMode.MenuBackgroundColor;
-            }            
+            }
 
             #endregion DataGridView
         }
@@ -274,12 +277,12 @@ namespace LogExpert.Dialogs
         }
 
 
-        private void CommentPainting(DataGridView gridView, int rowIndex, DataGridViewCellPaintingEventArgs e)
+        private void CommentPainting(BufferedDataGridView gridView, int rowIndex, DataGridViewCellPaintingEventArgs e)
         {
             Color backColor = LogExpert.Config.ColorMode.DockBackgroundColor;
 
             if ((e.State & DataGridViewElementStates.Selected) == DataGridViewElementStates.Selected)
-            {                
+            {
                 Brush brush;
                 if (gridView.Focused)
                 {
@@ -319,7 +322,7 @@ namespace LogExpert.Dialogs
             logView?.DeleteBookmarks(lineNumList);
         }
 
-        private static void InvalidateCurrentRow(DataGridView gridView)
+        private static void InvalidateCurrentRow(BufferedDataGridView gridView)
         {
             if (gridView.CurrentCellAddress.Y > -1)
             {
@@ -334,7 +337,7 @@ namespace LogExpert.Dialogs
                 // multiple selection or no selection at all
                 bookmarkTextBox.Enabled = false;
 
-// disable the control first so that changes made to it won't propagate to the bookmark item
+                // disable the control first so that changes made to it won't propagate to the bookmark item
                 bookmarkTextBox.Text = string.Empty;
             }
             else
@@ -384,7 +387,7 @@ namespace LogExpert.Dialogs
                     // CommentPainting(this.bookmarkDataGridView, lineNum, e);
                     // }
                     {
-// else
+                        // else
                         PaintHelper.CellPainting(logPaintContext, bookmarkDataGridView, lineNum, e);
                     }
                 }
@@ -467,22 +470,22 @@ namespace LogExpert.Dialogs
             }
         }
 
-        private void bookmarkGridView_Enter(object sender, EventArgs e)
+        private void OnBookmarkGridViewEnter(object sender, EventArgs e)
         {
             InvalidateCurrentRow(bookmarkDataGridView);
         }
 
-        private void bookmarkGridView_Leave(object sender, EventArgs e)
+        private void OnBookmarkGridViewLeave(object sender, EventArgs e)
         {
             InvalidateCurrentRow(bookmarkDataGridView);
         }
 
-        private void deleteBookmarksToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnDeleteBookmarksToolStripMenuItemClick(object sender, EventArgs e)
         {
             DeleteSelectedBookmarks();
         }
 
-        private void bookmarkTextBox_TextChanged(object sender, EventArgs e)
+        private void OnBookmarkTextBoxTextChanged(object sender, EventArgs e)
         {
             if (!bookmarkTextBox.Enabled)
             {
@@ -505,7 +508,7 @@ namespace LogExpert.Dialogs
             logView?.RefreshLogView();
         }
 
-        private void bookmarkDataGridView_SelectionChanged(object sender, EventArgs e)
+        private void OnBookmarkDataGridViewSelectionChanged(object sender, EventArgs e)
         {
             if (bookmarkDataGridView.SelectedRows.Count != 1
                 || bookmarkDataGridView.SelectedRows[0].Index >= bookmarkData.Bookmarks.Count)
@@ -518,7 +521,7 @@ namespace LogExpert.Dialogs
             }
         }
 
-        private void bookmarkDataGridView_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
+        private void OnBookmarkDataGridViewPreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
             if (e.KeyCode == Keys.Tab)
             {
@@ -526,7 +529,7 @@ namespace LogExpert.Dialogs
             }
         }
 
-        private void bookmarkDataGridView_CellToolTipTextNeeded(object sender,
+        private void OnBookmarkDataGridViewCellToolTipTextNeeded(object sender,
             DataGridViewCellToolTipTextNeededEventArgs e)
         {
             if (e.ColumnIndex != 0 || e.RowIndex <= -1 || e.RowIndex >= bookmarkData.Bookmarks.Count)
@@ -542,7 +545,7 @@ namespace LogExpert.Dialogs
             }
         }
 
-        private void bookmarkDataGridView_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        private void OnBookmarkDataGridViewCellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             // Toggle bookmark when double-clicking on the first column
             if (e.ColumnIndex == 0 && e.RowIndex >= 0 && bookmarkDataGridView.CurrentRow != null)
@@ -551,7 +554,7 @@ namespace LogExpert.Dialogs
                 int lineNum = bookmarkData.Bookmarks[bookmarkDataGridView.CurrentRow.Index].LineNum;
                 bookmarkData.ToggleBookmark(lineNum);
 
-// we don't ask for confirmation if the bookmark has an associated comment...
+                // we don't ask for confirmation if the bookmark has an associated comment...
                 int boomarkCount = bookmarkData.Bookmarks.Count;
                 bookmarkDataGridView.RowCount = boomarkCount;
 
@@ -594,12 +597,9 @@ namespace LogExpert.Dialogs
             }
         }
 
-        private void removeCommentsToolStripMenuItem_Click(object sender, EventArgs e)
+        private void OnRemoveCommentsToolStripMenuItemClick(object sender, EventArgs e)
         {
-            if (
-                MessageBox.Show("Really remove bookmark comments for selected lines?", "LogExpert",
-                    MessageBoxButtons.YesNo) ==
-                DialogResult.Yes)
+            if (MessageBox.Show("Really remove bookmark comments for selected lines?", "LogExpert", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 List<int> lineNumList = [];
                 foreach (DataGridViewRow row in bookmarkDataGridView.SelectedRows)
@@ -616,12 +616,12 @@ namespace LogExpert.Dialogs
             }
         }
 
-        private void commentColumnCheckBox_CheckedChanged(object sender, EventArgs e)
+        private void OnCommentColumnCheckBoxCheckedChanged(object sender, EventArgs e)
         {
             ShowCommentColumn(commentColumnCheckBox.Checked);
         }
 
-        private void BookmarkWindow_ClientSizeChanged(object sender, EventArgs e)
+        private void OnBookmarkWindowClientSizeChanged(object sender, EventArgs e)
         {
             if (Width > 0 && Height > 0)
             {
@@ -650,23 +650,23 @@ namespace LogExpert.Dialogs
             }
         }
 
-        private void bookmarkDataGridView_RowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
+        private void OnBookmarkDataGridViewRowsAdded(object sender, DataGridViewRowsAddedEventArgs e)
         {
             HideIfNeeded();
         }
 
-        private void bookmarkDataGridView_RowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
+        private void OnBookmarkDataGridViewRowsRemoved(object sender, DataGridViewRowsRemovedEventArgs e)
         {
             HideIfNeeded();
         }
 
-        private void BookmarkWindow_SizeChanged(object sender, EventArgs e)
+        private void OnBookmarkWindowSizeChanged(object sender, EventArgs e)
         {
             // if (!this.splitContainer1.Visible)
             // {
             // // redraw the "no bookmarks" display
             // Invalidate();
-            // } 
+            // }
         }
 
         #endregion
