@@ -6,6 +6,7 @@ using LogExpert.Classes.Highlight;
 using LogExpert.Classes.Log;
 using LogExpert.Classes.Persister;
 using LogExpert.Config;
+using LogExpert.Dialogs;
 using LogExpert.Entities;
 using LogExpert.Entities.EventArgs;
 
@@ -338,7 +339,7 @@ namespace LogExpert.Controls.LogWindow
             SetColumnizerInternal(CurrentColumnizer);
         }
 
-        public void SetColumnizer(ILogLineColumnizer columnizer, DataGridView gridView)
+        public void SetColumnizer(ILogLineColumnizer columnizer, BufferedDataGridView gridView)
         {
             PaintHelper.SetColumnizer(columnizer, gridView);
 
@@ -394,7 +395,7 @@ namespace LogExpert.Controls.LogWindow
             return Column.EmptyColumn;
         }
 
-        public void CellPainting(DataGridView gridView, int rowIndex, DataGridViewCellPaintingEventArgs e)
+        public void CellPainting(BufferedDataGridView gridView, int rowIndex, DataGridViewCellPaintingEventArgs e)
         {
             if (rowIndex < 0 || e.ColumnIndex < 0)
             {
@@ -495,9 +496,9 @@ namespace LogExpert.Controls.LogWindow
             }
         }
 
-        public void OnDataGridView_CellPainting(object sender, DataGridViewCellPaintingEventArgs e)
+        public void OnDataGridViewCellPainting(object sender, DataGridViewCellPaintingEventArgs e)
         {
-            DataGridView gridView = (DataGridView)sender;
+            BufferedDataGridView gridView = (BufferedDataGridView)sender;
             CellPainting(gridView, e.RowIndex, e);
         }
 
@@ -867,7 +868,7 @@ namespace LogExpert.Controls.LogWindow
 
         public void ToggleBookmark()
         {
-            DataGridView gridView;
+            BufferedDataGridView gridView;
             int lineNum;
 
             if (filterGridView.Focused)

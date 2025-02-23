@@ -215,6 +215,36 @@ namespace LogExpert.Dialogs
             return null;
         }
 
+        ///// <summary>
+        ///// Overwrite the ProcessCmdKey to handle the Copy command (Ctrl+C) to copy the selected rows to the clipboard.
+        ///// </summary>
+        ///// <param name="msg"></param>
+        ///// <param name="keyData"></param>
+        ///// <returns></returns>
+        //protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        //{
+        //    if ((keyData == (Keys.Control | Keys.C)))
+        //    {
+        //        StringBuilder stringBuilder = new();
+        //        var tabulator = "\t";
+
+        //        foreach (DataGridViewRow row in SelectedRows)
+        //        {
+        //            foreach (DataGridViewCell cell in row.Cells)
+        //            {
+        //                stringBuilder.Append(cell.Value?.ToString() ?? string.Empty);
+        //                stringBuilder.Append(tabulator);
+        //            }
+
+        //            stringBuilder.AppendLine();
+        //        }
+
+        //        Clipboard.SetText(stringBuilder.ToString());
+        //    }
+
+        //    return base.ProcessCmdKey(ref msg, keyData);
+        //}
+
         private void PaintOverlays(PaintEventArgs e)
         {
             BufferedGraphicsContext currentContext = BufferedGraphicsManager.Current;
