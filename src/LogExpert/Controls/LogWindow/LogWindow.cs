@@ -579,6 +579,7 @@ namespace LogExpert.Controls.LogWindow
         internal void ToggleColumnFinder(bool show, bool setFocus)
         {
             _guiStateArgs.ColumnFinderVisible = show;
+
             if (show)
             {
                 columnComboBox.AutoCompleteMode = AutoCompleteMode.Suggest;

@@ -73,6 +73,8 @@ namespace LogExpert.Dialogs
 
             FillPortableMode();
 
+            upDownMaximumLineLength.Value = Preferences.MaxLineLength;
+
             checkBoxDarkMode.Checked = Preferences.darkMode;
             checkBoxTimestamp.Checked = Preferences.timestampControl;
             checkBoxSyncFilter.Checked = Preferences.filterSync;
@@ -207,8 +209,10 @@ namespace LogExpert.Dialogs
 
         private void OnBtnToolClickInternal(TextBox textBox)
         {
-            OpenFileDialog dlg = new();
-            dlg.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            OpenFileDialog dlg = new()
+            {
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+            };
 
             if (string.IsNullOrEmpty(textBox.Text) == false)
             {
@@ -392,9 +396,11 @@ namespace LogExpert.Dialogs
             {
                 if (!row.IsNewRow)
                 {
-                    ColumnizerMaskEntry entry = new();
-                    entry.mask = (string)row.Cells[0].Value;
-                    entry.columnizerName = (string)row.Cells[1].Value;
+                    ColumnizerMaskEntry entry = new()
+                    {
+                        mask = (string)row.Cells[0].Value,
+                        columnizerName = (string)row.Cells[1].Value
+                    };
                     Preferences.columnizerMaskList.Add(entry);
                 }
             }
@@ -408,9 +414,11 @@ namespace LogExpert.Dialogs
             {
                 if (!row.IsNewRow)
                 {
-                    HighlightMaskEntry entry = new();
-                    entry.mask = (string)row.Cells[0].Value;
-                    entry.highlightGroupName = (string)row.Cells[1].Value;
+                    HighlightMaskEntry entry = new()
+                    {
+                        mask = (string)row.Cells[0].Value,
+                        highlightGroupName = (string)row.Cells[1].Value
+                    };
                     Preferences.highlightMaskList.Add(entry);
                 }
             }
@@ -665,6 +673,7 @@ namespace LogExpert.Dialogs
                 Preferences.saveLocation = SessionSaveLocation.SameDir;
             }
 
+            Preferences.MaxLineLength = (int)upDownMaximumLineLength.Value;
             Preferences.saveFilters = checkBoxSaveFilter.Checked;
             Preferences.bufferCount = (int)upDownBlockCount.Value;
             Preferences.linesPerBuffer = (int)upDownLinesPerBlock.Value;
