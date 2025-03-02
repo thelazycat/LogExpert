@@ -90,7 +90,7 @@ namespace LogExpert.Controls.LogWindow
         private ILogLineColumnizer _currentColumnizer;
 
         //List<HilightEntry> currentHilightEntryList = new List<HilightEntry>();
-        private HilightGroup _currentHighlightGroup = new();
+        private HighlightGroup _currentHighlightGroup = new();
 
         private SearchParams _currentSearchParams;
 
@@ -129,7 +129,7 @@ namespace LogExpert.Controls.LogWindow
         private bool _shouldCancel;
         private bool _shouldTimestampDisplaySyncingCancel;
         private bool _showAdvanced;
-        private List<HilightEntry> _tempHighlightEntryList = [];
+        private List<HighlightEntry> _tempHighlightEntryList = [];
         private int _timeShiftSyncLine = 0;
 
         private bool _waitingForClose;
@@ -160,7 +160,7 @@ namespace LogExpert.Controls.LogWindow
             ForcePersistenceLoading = forcePersistenceLoading;
 
             dataGridView.CellValueNeeded += OnDataGridViewCellValueNeeded;
-            dataGridView.CellPainting += OnDataGridView_CellPainting;
+            dataGridView.CellPainting += OnDataGridViewCellPainting;
 
             filterGridView.CellValueNeeded += OnFilterGridViewCellValueNeeded;
             filterGridView.CellPainting += OnFilterGridViewCellPainting;
@@ -198,7 +198,7 @@ namespace LogExpert.Controls.LogWindow
                 filterComboBox.Items.Add(item);
             }
 
-            filterComboBox.DropDownHeight = filterComboBox.ItemHeight * ConfigManager.Settings.preferences.maximumFilterEntriesDisplayed;
+            filterComboBox.DropDownHeight = filterComboBox.ItemHeight * ConfigManager.Settings.Preferences.maximumFilterEntriesDisplayed;
             AutoResizeFilterBox();
 
             filterRegexCheckBox.Checked = _filterParams.isRegex;
@@ -499,7 +499,7 @@ namespace LogExpert.Controls.LogWindow
 
         public string ForcedPersistenceFileName { get; set; } = null;
 
-        public Preferences Preferences => ConfigManager.Settings.preferences;
+        public Preferences Preferences => ConfigManager.Settings.Preferences;
 
         public string GivenFileName { get; set; } = null;
 
@@ -561,10 +561,13 @@ namespace LogExpert.Controls.LogWindow
 
         internal void ChangeMultifileMask()
         {
-            MultiFileMaskDialog dlg = new(this, FileName);
-            dlg.Owner = this;
-            dlg.MaxDays = _multiFileOptions.MaxDayTry;
-            dlg.FileNamePattern = _multiFileOptions.FormatPattern;
+            MultiFileMaskDialog dlg = new(this, FileName)
+            {
+                Owner = this,
+                MaxDays = _multiFileOptions.MaxDayTry,
+                FileNamePattern = _multiFileOptions.FormatPattern
+            };
+
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 _multiFileOptions.FormatPattern = dlg.FileNamePattern;
@@ -579,6 +582,7 @@ namespace LogExpert.Controls.LogWindow
         internal void ToggleColumnFinder(bool show, bool setFocus)
         {
             _guiStateArgs.ColumnFinderVisible = show;
+
             if (show)
             {
                 columnComboBox.AutoCompleteMode = AutoCompleteMode.Suggest;
@@ -646,7 +650,7 @@ namespace LogExpert.Controls.LogWindow
 
         private delegate void PositionAfterReloadFx(ReloadMemento reloadMemento);
 
-        private delegate void AutoResizeColumnsFx(DataGridView gridView);
+        private delegate void AutoResizeColumnsFx(BufferedDataGridView gridView);
 
         private delegate bool BoolReturnDelegate();
 

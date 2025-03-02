@@ -34,7 +34,7 @@ namespace LogExpert.Config
 
         public float fontSize = 9;
 
-        public List<HighlightMaskEntry> highlightMaskList = [];
+        public List<HighlightMaskEntry> HighlightMaskList { get; set; } = [];
 
         public bool isAutoHideFilterList = false;
 
@@ -102,6 +102,10 @@ namespace LogExpert.Config
         public bool useLegacyReader;
 
         public bool ShowErrorMessageAllowOnlyOneInstances { get; set; }
+
+        public int MaxLineLength { get; set; } = 20000;
+
+        public List<HighlightGroup> HighlightGroupList { get; set; } = [];
 
         #endregion
     }

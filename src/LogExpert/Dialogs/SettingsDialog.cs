@@ -73,6 +73,8 @@ namespace LogExpert.Dialogs
 
             FillPortableMode();
 
+            upDownMaximumLineLength.Value = Preferences.MaxLineLength;
+
             checkBoxDarkMode.Checked = Preferences.darkMode;
             checkBoxTimestamp.Checked = Preferences.timestampControl;
             checkBoxSyncFilter.Checked = Preferences.filterSync;
@@ -207,8 +209,10 @@ namespace LogExpert.Dialogs
 
         private void OnBtnToolClickInternal(TextBox textBox)
         {
-            OpenFileDialog dlg = new();
-            dlg.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+            OpenFileDialog dlg = new()
+            {
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)
+            };
 
             if (string.IsNullOrEmpty(textBox.Text) == false)
             {
@@ -347,18 +351,18 @@ namespace LogExpert.Dialogs
             //TODO Remove if not necessary
             DataGridViewTextBoxColumn textColumn = (DataGridViewTextBoxColumn)dataGridViewHighlightMask.Columns[0];
 
-            foreach (HilightGroup group in (IList<HilightGroup>)_logTabWin.HilightGroupList)
+            foreach (HighlightGroup group in (IList<HighlightGroup>)_logTabWin.HighlightGroupList)
             {
                 comboColumn.Items.Add(group.GroupName);
             }
 
-            foreach (HighlightMaskEntry maskEntry in Preferences.highlightMaskList)
+            foreach (HighlightMaskEntry maskEntry in Preferences.HighlightMaskList)
             {
                 DataGridViewRow row = new();
                 row.Cells.Add(new DataGridViewTextBoxCell());
                 DataGridViewComboBoxCell cell = new();
 
-                foreach (HilightGroup group in (IList<HilightGroup>)_logTabWin.HilightGroupList)
+                foreach (HighlightGroup group in (IList<HighlightGroup>)_logTabWin.HighlightGroupList)
                 {
                     cell.Items.Add(group.GroupName);
                 }
@@ -366,9 +370,9 @@ namespace LogExpert.Dialogs
                 row.Cells.Add(cell);
                 row.Cells[0].Value = maskEntry.mask;
 
-                HilightGroup currentGroup = _logTabWin.FindHighlightGroup(maskEntry.highlightGroupName);
-                currentGroup ??= ((IList<HilightGroup>)_logTabWin.HilightGroupList)[0];
-                currentGroup ??= new HilightGroup();
+                HighlightGroup currentGroup = _logTabWin.FindHighlightGroup(maskEntry.highlightGroupName);
+                currentGroup ??= ((IList<HighlightGroup>)_logTabWin.HighlightGroupList)[0];
+                currentGroup ??= new HighlightGroup();
 
                 row.Cells[1].Value = currentGroup.GroupName;
                 dataGridViewHighlightMask.Rows.Add(row);
@@ -392,9 +396,11 @@ namespace LogExpert.Dialogs
             {
                 if (!row.IsNewRow)
                 {
-                    ColumnizerMaskEntry entry = new();
-                    entry.mask = (string)row.Cells[0].Value;
-                    entry.columnizerName = (string)row.Cells[1].Value;
+                    ColumnizerMaskEntry entry = new()
+                    {
+                        mask = (string)row.Cells[0].Value,
+                        columnizerName = (string)row.Cells[1].Value
+                    };
                     Preferences.columnizerMaskList.Add(entry);
                 }
             }
@@ -402,16 +408,18 @@ namespace LogExpert.Dialogs
 
         private void SaveHighlightMaskList()
         {
-            Preferences.highlightMaskList.Clear();
+            Preferences.HighlightMaskList.Clear();
 
             foreach (DataGridViewRow row in dataGridViewHighlightMask.Rows)
             {
                 if (!row.IsNewRow)
                 {
-                    HighlightMaskEntry entry = new();
-                    entry.mask = (string)row.Cells[0].Value;
-                    entry.highlightGroupName = (string)row.Cells[1].Value;
-                    Preferences.highlightMaskList.Add(entry);
+                    HighlightMaskEntry entry = new()
+                    {
+                        mask = (string)row.Cells[0].Value,
+                        highlightGroupName = (string)row.Cells[1].Value
+                    };
+                    Preferences.HighlightMaskList.Add(entry);
                 }
             }
         }
@@ -665,6 +673,7 @@ namespace LogExpert.Dialogs
                 Preferences.saveLocation = SessionSaveLocation.SameDir;
             }
 
+            Preferences.MaxLineLength = (int)upDownMaximumLineLength.Value;
             Preferences.saveFilters = checkBoxSaveFilter.Checked;
             Preferences.bufferCount = (int)upDownBlockCount.Value;
             Preferences.linesPerBuffer = (int)upDownLinesPerBlock.Value;
@@ -985,12 +994,10 @@ namespace LogExpert.Dialogs
                 Filter = @"Settings (*.json)|*.json|All files (*.*)|*.*"
             };
 
-            DialogResult result = dlg.ShowDialog();
-
-            if (result == DialogResult.OK)
+            if (dlg.ShowDialog() == DialogResult.OK)
             {
                 FileInfo fileInfo = new(dlg.FileName);
-                ConfigManager.Export(fileInfo);
+                ConfigManager.ExportSettings(fileInfo);
             }
         }
 
@@ -1022,7 +1029,7 @@ namespace LogExpert.Dialogs
                 }
 
                 ConfigManager.Import(fileInfo, dlg.ImportFlags);
-                Preferences = ConfigManager.Settings.preferences;
+                Preferences = ConfigManager.Settings.Preferences;
                 FillDialog();
                 MessageBox.Show(this, @"Settings imported", @"LogExpert");
             }

@@ -23,8 +23,8 @@ namespace LogExpert.Dialogs
         private readonly Image _applyButtonImage;
         private string _bookmarkComment;
         private ActionEntry _currentActionEntry = new();
-        private HilightGroup _currentGroup;
-        private List<HilightGroup> _highlightGroupList;
+        private HighlightGroup _currentGroup;
+        private List<HighlightGroup> _highlightGroupList;
 
         #endregion
 
@@ -46,7 +46,7 @@ namespace LogExpert.Dialogs
 
         #region Properties / Indexers
 
-        public List<HilightGroup> HighlightGroupList
+        public List<HighlightGroup> HighlightGroupList
         {
             get => _highlightGroupList;
             set
@@ -55,7 +55,7 @@ namespace LogExpert.Dialogs
 
                 foreach (var group in value)
                 {
-                    _highlightGroupList.Add((HilightGroup)group.Clone());
+                    _highlightGroupList.Add((HighlightGroup)group.Clone());
                 }
             }
         }
@@ -96,7 +96,7 @@ namespace LogExpert.Dialogs
         {
             if (comboBoxGroups.SelectedIndex >= 0 && comboBoxGroups.SelectedIndex < HighlightGroupList.Count)
             {
-                HilightGroup newGroup = (HilightGroup)HighlightGroupList[comboBoxGroups.SelectedIndex].Clone();
+                HighlightGroup newGroup = (HighlightGroup)HighlightGroupList[comboBoxGroups.SelectedIndex].Clone();
                 newGroup.GroupName = "Copy of " + newGroup.GroupName;
 
                 HighlightGroupList.Add(newGroup);
@@ -143,19 +143,21 @@ namespace LogExpert.Dialogs
 
         private void OnBtnExportGroupClick(object sender, EventArgs e)
         {
-            //SaveFileDialog dlg = new SaveFileDialog();
-            //dlg.Title = @"Export Settings to file";
-            //dlg.DefaultExt = "json";
-            //dlg.AddExtension = true;
-            //dlg.Filter = @"Settings (*.json)|*.json|All files (*.*)|*.*";
+            SaveFileDialog dlg = new()
+            {
+                Title = @"Export Settings to file",
+                DefaultExt = "json",
+                AddExtension = true,
+                Filter = @"Settings (*.json)|*.json|All files (*.*)|*.*"
+            };
 
-            //DialogResult result = dlg.ShowDialog();
+            DialogResult result = dlg.ShowDialog();
 
-            //if (result == DialogResult.OK)
-            //{
-            //    FileInfo fileInfo = new FileInfo(dlg.FileName);
-            //    ConfigManager.Export(fileInfo);
-            //}
+            if (result == DialogResult.OK)
+            {
+                FileInfo fileInfo = new(dlg.FileName);
+                ConfigManager.ExportHighlightSettings(fileInfo);
+            }
         }
 
         private void OnBtnGroupDownClick(object sender, EventArgs e)
@@ -184,18 +186,13 @@ namespace LogExpert.Dialogs
 
         private void OnBtnImportGroupClick(object sender, EventArgs e)
         {
-            ImportSettingsDialog dlg = new();
-
-            foreach (Control ctl in dlg.groupBoxImportOptions.Controls)
+            OpenFileDialog dlg = new()
             {
-                if (ctl.Tag != null)
-                {
-                    ((CheckBox)ctl).Checked = false;
-                }
-            }
-
-            dlg.checkBoxHighlightSettings.Checked = true;
-            dlg.checkBoxKeepExistingSettings.Checked = true;
+                Title = @"Export Highlight Settings to file",
+                DefaultExt = "json",
+                AddExtension = true,
+                Filter = @"Settings (*.json)|*.json|All files (*.*)|*.*",
+            };
 
             if (dlg.ShowDialog() != DialogResult.OK)
             {
@@ -222,12 +219,13 @@ namespace LogExpert.Dialogs
                 return;
             }
 
-            ConfigManager.Import(fileInfo, dlg.ImportFlags);
+            ConfigManager.ImportHighlightSettings(fileInfo);
             Cursor.Current = Cursors.Default;
 
-            _highlightGroupList = ConfigManager.Settings.hilightGroupList;
+            _highlightGroupList = ConfigManager.Settings.Preferences.HighlightGroupList;
 
             FillGroupComboBox();
+            SelectGroup(0);
 
             MessageBox.Show(this, @"Settings imported", @"LogExpert");
         }
@@ -242,20 +240,21 @@ namespace LogExpert.Dialogs
                 listBoxHighlight.Items.RemoveAt(index);
                 listBoxHighlight.Items.Insert(index + 1, item);
                 listBoxHighlight.SelectedIndex = index + 1;
-                _currentGroup.HilightEntryList.Reverse(index, 2);
+                _currentGroup.HighlightEntryList.Reverse(index, 2);
             }
         }
 
         private void OnBtnMoveUpClick(object sender, EventArgs e)
         {
             int index = listBoxHighlight.SelectedIndex;
+
             if (index > 0)
             {
                 object item = listBoxHighlight.SelectedItem;
                 listBoxHighlight.Items.RemoveAt(index); // will also clear the selection
                 listBoxHighlight.Items.Insert(index - 1, item);
                 listBoxHighlight.SelectedIndex = index - 1; // restore the selection
-                _currentGroup.HilightEntryList.Reverse(index - 1, 2);
+                _currentGroup.HighlightEntryList.Reverse(index - 1, 2);
             }
         }
 
@@ -266,9 +265,10 @@ namespace LogExpert.Dialogs
             string name = baseName;
             bool uniqueName = false;
             int i = 1;
+
             while (!uniqueName)
             {
-                uniqueName = HighlightGroupList.FindIndex(delegate (HilightGroup g) { return g.GroupName == name; }) < 0;
+                uniqueName = HighlightGroupList.FindIndex(delegate (HighlightGroup g) { return g.GroupName == name; }) < 0;
 
                 if (!uniqueName)
                 {
@@ -276,7 +276,7 @@ namespace LogExpert.Dialogs
                 }
             }
 
-            HilightGroup newGroup = new() { GroupName = name };
+            HighlightGroup newGroup = new() { GroupName = name };
             HighlightGroupList.Add(newGroup);
             FillGroupComboBox();
             SelectGroup(HighlightGroupList.Count - 1);
@@ -314,12 +314,14 @@ namespace LogExpert.Dialogs
         {
             if (e.Button == MouseButtons.Right)
             {
-                RegexHelperDialog dlg = new();
-                dlg.Owner = this;
-                dlg.CaseSensitive = checkBoxCaseSensitive.Checked;
-                dlg.Pattern = textBoxSearchString.Text;
-                DialogResult res = dlg.ShowDialog();
-                if (res == DialogResult.OK)
+                RegexHelperDialog dlg = new()
+                {
+                    Owner = this,
+                    CaseSensitive = checkBoxCaseSensitive.Checked,
+                    Pattern = textBoxSearchString.Text
+                };
+
+                if (dlg.ShowDialog() == DialogResult.OK)
                 {
                     checkBoxCaseSensitive.Checked = dlg.CaseSensitive;
                     textBoxSearchString.Text = dlg.Pattern;
@@ -336,9 +338,10 @@ namespace LogExpert.Dialogs
         private void OnCmbBoxGroupDrawItem(object sender, DrawItemEventArgs e)
         {
             e.DrawBackground();
+
             if (e.Index >= 0)
             {
-                HilightGroup group = HighlightGroupList[e.Index];
+                HighlightGroup group = HighlightGroupList[e.Index];
                 Rectangle rectangle = new(0, e.Bounds.Top, e.Bounds.Width, e.Bounds.Height);
 
                 Brush brush = new SolidBrush(SystemColors.ControlText);
@@ -363,11 +366,12 @@ namespace LogExpert.Dialogs
             if (listBoxHighlight.SelectedIndex >= 0)
             {
                 int removeIndex = listBoxHighlight.SelectedIndex;
-                _currentGroup.HilightEntryList.RemoveAt(removeIndex);
+                _currentGroup.HighlightEntryList.RemoveAt(removeIndex);
                 listBoxHighlight.Items.RemoveAt(removeIndex);
 
                 // Select previous (or first if none before)
                 int nextSelectIndex = removeIndex;
+
                 if (nextSelectIndex >= listBoxHighlight.Items.Count)
                 {
                     nextSelectIndex--; // if last item was removed, go one up
@@ -402,9 +406,10 @@ namespace LogExpert.Dialogs
         private void OnHighlightListBoxDrawItem(object sender, DrawItemEventArgs e)
         {
             e.DrawBackground();
+
             if (e.Index >= 0)
             {
-                HilightEntry entry = (HilightEntry)listBoxHighlight.Items[e.Index];
+                HighlightEntry entry = (HighlightEntry)listBoxHighlight.Items[e.Index];
                 Rectangle rectangle = new(0, e.Bounds.Top, e.Bounds.Width, e.Bounds.Height);
 
                 if ((e.State & DrawItemState.Selected) != DrawItemState.Selected)
@@ -412,8 +417,7 @@ namespace LogExpert.Dialogs
                     e.Graphics.FillRectangle(new SolidBrush(entry.BackgroundColor), rectangle);
                 }
 
-                e.Graphics.DrawString(entry.SearchText, e.Font, new SolidBrush(entry.ForegroundColor),
-                    new PointF(rectangle.Left, rectangle.Top));
+                e.Graphics.DrawString(entry.SearchText, e.Font, new SolidBrush(entry.ForegroundColor), new PointF(rectangle.Left, rectangle.Top));
 
                 e.DrawFocusRectangle();
             }
@@ -446,7 +450,7 @@ namespace LogExpert.Dialogs
                 {
                     CheckRegex();
 
-                    HilightEntry entry = new()
+                    HighlightEntry entry = new()
                     {
                         SearchText = textBoxSearchString.Text,
                         ForegroundColor = colorBoxForeground.SelectedColor,
@@ -466,7 +470,7 @@ namespace LogExpert.Dialogs
                     listBoxHighlight.Items.Add(entry);
 
                     // Select the newly created item
-                    _currentGroup.HilightEntryList.Add(entry);
+                    _currentGroup.HighlightEntryList.Add(entry);
                     listBoxHighlight.SelectedItem = entry;
                 }
                 catch (Exception ex)
@@ -498,10 +502,13 @@ namespace LogExpert.Dialogs
 
         private void ChooseColor(ColorComboBox comboBox)
         {
-            ColorDialog colorDialog = new();
-            colorDialog.AllowFullOpen = true;
-            colorDialog.ShowHelp = false;
-            colorDialog.Color = comboBox.CustomColor;
+            ColorDialog colorDialog = new()
+            {
+                AllowFullOpen = true,
+                ShowHelp = false,
+                Color = comboBox.CustomColor
+            };
+
             if (colorDialog.ShowDialog() == DialogResult.OK)
             {
                 comboBox.CustomColor = colorDialog.Color;
@@ -512,6 +519,7 @@ namespace LogExpert.Dialogs
         private void Dirty()
         {
             int index = listBoxHighlight.SelectedIndex;
+
             if (index > -1)
             {
                 btnApply.Enabled = true;
@@ -527,7 +535,7 @@ namespace LogExpert.Dialogs
 
             comboBoxGroups.Items.Clear();
 
-            foreach (HilightGroup group in HighlightGroupList)
+            foreach (HighlightGroup group in HighlightGroupList)
             {
                 comboBoxGroups.Items.Add(group);
             }
@@ -540,7 +548,7 @@ namespace LogExpert.Dialogs
             listBoxHighlight.Items.Clear();
             if (_currentGroup != null)
             {
-                foreach (HilightEntry entry in _currentGroup.HilightEntryList)
+                foreach (HighlightEntry entry in _currentGroup.HighlightEntryList)
                 {
                     listBoxHighlight.Items.Add(entry);
                 }
@@ -554,10 +562,10 @@ namespace LogExpert.Dialogs
 
             if (HighlightGroupList.Count == 0)
             {
-                HilightGroup highlightGroup = new()
+                HighlightGroup highlightGroup = new()
                 {
                     GroupName = def,
-                    HilightEntryList = []
+                    HighlightEntryList = []
                 };
 
                 HighlightGroupList.Add(highlightGroup);
@@ -567,12 +575,13 @@ namespace LogExpert.Dialogs
 
             _currentGroup = null;
             string groupToSelect = PreSelectedGroupName;
+
             if (string.IsNullOrEmpty(groupToSelect))
             {
                 groupToSelect = def;
             }
 
-            foreach (HilightGroup group in HighlightGroupList)
+            foreach (HighlightGroup group in HighlightGroupList)
             {
                 if (group.GroupName.Equals(groupToSelect))
                 {
@@ -621,7 +630,7 @@ namespace LogExpert.Dialogs
             {
                 CheckRegex();
 
-                HilightEntry entry = (HilightEntry)listBoxHighlight.SelectedItem;
+                HighlightEntry entry = (HighlightEntry)listBoxHighlight.SelectedItem;
 
                 entry.ForegroundColor = (Color)colorBoxForeground.SelectedItem;
                 entry.BackgroundColor = (Color)colorBoxBackground.SelectedItem;
@@ -671,7 +680,7 @@ namespace LogExpert.Dialogs
 
         private void StartEditEntry()
         {
-            HilightEntry entry = (HilightEntry)listBoxHighlight.SelectedItem;
+            HighlightEntry entry = (HighlightEntry)listBoxHighlight.SelectedItem;
 
             if (entry != null)
             {

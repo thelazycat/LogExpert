@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Text;
-using System.Windows.Forms;
-using System.Drawing.Drawing2D;
-using LogExpert.Entities;
+﻿using LogExpert.Entities;
+
 using NLog;
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Windows.Forms;
 
 namespace LogExpert.Dialogs
 {
@@ -24,7 +23,7 @@ namespace LogExpert.Dialogs
         private readonly SortedList<int, BookmarkOverlay> _overlayList = [];
 
         private readonly Pen _pen;
-        private readonly Brush _textBrush = new SolidBrush(Color.FromArgb(200, 0, 0, 90));
+        private readonly Brush _bookmarktextBrush = new SolidBrush(Color.FromArgb(200, 0, 0, 90));
 
         private BookmarkOverlay _draggedOverlay;
         private Point _dragStartPoint;
@@ -37,7 +36,7 @@ namespace LogExpert.Dialogs
 
         public BufferedDataGridView()
         {
-            _pen = new Pen(_bubbleColor, (float) 3.0);
+            _pen = new Pen(_bubbleColor, (float)3.0);
             _brush = new SolidBrush(_bubbleColor);
 
             InitializeComponent();
@@ -61,7 +60,7 @@ namespace LogExpert.Dialogs
 
         #region Properties
 
-        /*    
+        /*
       public Graphics Buffer
       {
         get { return this.myBuffer.Graphics; }
@@ -112,9 +111,9 @@ namespace LogExpert.Dialogs
             base.OnEditingControlShowing(e);
             e.Control.KeyDown -= OnControlKeyDown;
             e.Control.KeyDown += OnControlKeyDown;
-            DataGridViewTextBoxEditingControl editControl = (DataGridViewTextBoxEditingControl) e.Control;
-            e.Control.PreviewKeyDown -= Control_PreviewKeyDown;
-            e.Control.PreviewKeyDown += Control_PreviewKeyDown;
+            DataGridViewTextBoxEditingControl editControl = (DataGridViewTextBoxEditingControl)e.Control;
+            e.Control.PreviewKeyDown -= OnControlPreviewKeyDown;
+            e.Control.PreviewKeyDown += OnControlPreviewKeyDown;
 
             editControl.ContextMenuStrip = EditModeMenuStrip;
         }
@@ -122,6 +121,7 @@ namespace LogExpert.Dialogs
         protected override void OnMouseDown(MouseEventArgs e)
         {
             BookmarkOverlay overlay = GetOverlayForPosition(e.Location);
+
             if (overlay != null)
             {
                 if (e.Button == MouseButtons.Right)
@@ -181,6 +181,7 @@ namespace LogExpert.Dialogs
         protected override void OnMouseDoubleClick(MouseEventArgs e)
         {
             BookmarkOverlay overlay = GetOverlayForPosition(e.Location);
+
             if (overlay != null)
             {
                 if (e.Button == MouseButtons.Left)
@@ -214,71 +215,106 @@ namespace LogExpert.Dialogs
             return null;
         }
 
+        ///// <summary>
+        ///// Overwrite the ProcessCmdKey to handle the Copy command (Ctrl+C) to copy the selected rows to the clipboard.
+        ///// </summary>
+        ///// <param name="msg"></param>
+        ///// <param name="keyData"></param>
+        ///// <returns></returns>
+        //protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        //{
+        //    if ((keyData == (Keys.Control | Keys.C)))
+        //    {
+        //        StringBuilder stringBuilder = new();
+        //        var tabulator = "\t";
+
+        //        foreach (DataGridViewRow row in SelectedRows)
+        //        {
+        //            foreach (DataGridViewCell cell in row.Cells)
+        //            {
+        //                stringBuilder.Append(cell.Value?.ToString() ?? string.Empty);
+        //                stringBuilder.Append(tabulator);
+        //            }
+
+        //            stringBuilder.AppendLine();
+        //        }
+
+        //        Clipboard.SetText(stringBuilder.ToString());
+        //    }
+
+        //    return base.ProcessCmdKey(ref msg, keyData);
+        //}
+
         private void PaintOverlays(PaintEventArgs e)
         {
             BufferedGraphicsContext currentContext = BufferedGraphicsManager.Current;
-            using (BufferedGraphics myBuffer = currentContext.Allocate(CreateGraphics(), ClientRectangle))
+            using BufferedGraphics myBuffer = currentContext.Allocate(CreateGraphics(), ClientRectangle);
+            lock (_overlayList)
             {
-                lock (_overlayList)
+                _overlayList.Clear();
+            }
+
+            myBuffer.Graphics.SetClip(ClientRectangle, CombineMode.Union);
+            e.Graphics.SetClip(ClientRectangle, CombineMode.Union);
+
+            PaintEventArgs args = new(myBuffer.Graphics, e.ClipRectangle);
+
+            base.OnPaint(args);
+
+            StringFormat format = new()
+            {
+                LineAlignment = StringAlignment.Center,
+                Alignment = StringAlignment.Near
+            };
+
+            myBuffer.Graphics.SetClip(DisplayRectangle, CombineMode.Intersect);
+
+            // Remove Columnheader from Clippingarea
+            Rectangle rectTableHeader = new(DisplayRectangle.X, DisplayRectangle.Y, DisplayRectangle.Width, ColumnHeadersHeight);
+            myBuffer.Graphics.SetClip(rectTableHeader, CombineMode.Exclude);
+
+            //e.Graphics.SetClip(rect, CombineMode.Union);
+
+            lock (_overlayList)
+            {
+                foreach (BookmarkOverlay overlay in _overlayList.Values)
                 {
-                    _overlayList.Clear();
-                }
+                    SizeF textSize = myBuffer.Graphics.MeasureString(overlay.Bookmark.Text, _font, 300);
 
-                myBuffer.Graphics.SetClip(ClientRectangle, CombineMode.Union);
-                e.Graphics.SetClip(ClientRectangle, CombineMode.Union);
+                    Rectangle rectBubble = new(overlay.Position, new Size((int)textSize.Width, (int)textSize.Height));
+                    rectBubble.Offset(60, -(rectBubble.Height + 40));
+                    rectBubble.Inflate(3, 3);
+                    rectBubble.Location += overlay.Bookmark.OverlayOffset;
 
-                PaintEventArgs args = new(myBuffer.Graphics, e.ClipRectangle);
+                    overlay.BubbleRect = rectBubble;
 
-                base.OnPaint(args);
+                    myBuffer.Graphics.SetClip(rectBubble, CombineMode.Union); // Bubble to clip
+                    myBuffer.Graphics.SetClip(rectTableHeader, CombineMode.Exclude);
 
-                StringFormat format = new();
-                format.LineAlignment = StringAlignment.Center;
-                format.Alignment = StringAlignment.Near;
+                    e.Graphics.SetClip(rectBubble, CombineMode.Union);
 
-                myBuffer.Graphics.SetClip(DisplayRectangle, CombineMode.Intersect);
+                    RectangleF textRect = new(rectBubble.X, rectBubble.Y, rectBubble.Width, rectBubble.Height);
 
-                // Remove Columnheader from Clippingarea
-                Rectangle rectTableHeader = new(DisplayRectangle.X, DisplayRectangle.Y, DisplayRectangle.Width, ColumnHeadersHeight);
-                myBuffer.Graphics.SetClip(rectTableHeader, CombineMode.Exclude);
+                    myBuffer.Graphics.FillRectangle(_brush, rectBubble);
+                    //myBuffer.Graphics.DrawLine(_pen, overlay.Position, new Point(rect.X, rect.Y + rect.Height / 2));
+                    myBuffer.Graphics.DrawLine(_pen, overlay.Position, new Point(rectBubble.X, rectBubble.Y + rectBubble.Height));
+                    myBuffer.Graphics.DrawString(overlay.Bookmark.Text, _font, _bookmarktextBrush, textRect, format);
 
-                //e.Graphics.SetClip(rect, CombineMode.Union);
-
-                lock (_overlayList)
-                {
-                    foreach (BookmarkOverlay overlay in _overlayList.Values)
+                    if (_logger.IsDebugEnabled)
                     {
-                        SizeF textSize = myBuffer.Graphics.MeasureString(overlay.Bookmark.Text, _font, 300);
-                        Rectangle rectBubble = new(overlay.Position,
-                            new Size((int) textSize.Width, (int) textSize.Height));
-                        rectBubble.Offset(60, -(rectBubble.Height + 40));
-                        rectBubble.Inflate(3, 3);
-                        rectBubble.Location += overlay.Bookmark.OverlayOffset;
-                        overlay.BubbleRect = rectBubble;
-                        myBuffer.Graphics.SetClip(rectBubble, CombineMode.Union); // Bubble to clip
-                        myBuffer.Graphics.SetClip(rectTableHeader, CombineMode.Exclude);
-                        e.Graphics.SetClip(rectBubble, CombineMode.Union);
-                        RectangleF textRect = new(rectBubble.X, rectBubble.Y, rectBubble.Width, rectBubble.Height);
-                        myBuffer.Graphics.FillRectangle(_brush, rectBubble);
-                        //myBuffer.Graphics.DrawLine(_pen, overlay.Position, new Point(rect.X, rect.Y + rect.Height / 2));
-                        myBuffer.Graphics.DrawLine(_pen, overlay.Position, new Point(rectBubble.X, rectBubble.Y + rectBubble.Height));
-                        myBuffer.Graphics.DrawString(overlay.Bookmark.Text, _font, _textBrush, textRect, format);
-
-                        if (_logger.IsDebugEnabled)
-                        {
-                            _logger.Debug("ClipRgn: {0},{1},{2},{3}", myBuffer.Graphics.ClipBounds.Left, myBuffer.Graphics.ClipBounds.Top, myBuffer.Graphics.ClipBounds.Width, myBuffer.Graphics.ClipBounds.Height);
-                        }
+                        _logger.Debug("ClipRgn: {0},{1},{2},{3}", myBuffer.Graphics.ClipBounds.Left, myBuffer.Graphics.ClipBounds.Top, myBuffer.Graphics.ClipBounds.Width, myBuffer.Graphics.ClipBounds.Height);
                     }
                 }
-
-                myBuffer.Render(e.Graphics);
             }
+
+            myBuffer.Render(e.Graphics);
         }
 
         #endregion
 
         #region Events handler
 
-        private void Control_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
+        private void OnControlPreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
             if ((e.KeyCode == Keys.C || e.KeyCode == Keys.Insert) && e.Control)
             {

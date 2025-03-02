@@ -1,6 +1,9 @@
 ﻿using LogExpert.Config;
+
 using Newtonsoft.Json;
+
 using NUnit.Framework;
+
 using System.IO;
 
 namespace LogExpert.Tests
@@ -17,14 +20,14 @@ namespace LogExpert.Tests
             string settingsFile = configDir + "\\settings.json";
 
             Settings settings = null;
-            
+
             Assert.DoesNotThrow(CastSettings);
             Assert.That(settings, Is.Not.Null);
             Assert.That(settings.alwaysOnTop, Is.True);
 
             ConfigManager.Settings.alwaysOnTop = false;
             ConfigManager.Save(SettingsFlags.All);
-            
+
             settings = null;
             Assert.DoesNotThrow(CastSettings);
 
