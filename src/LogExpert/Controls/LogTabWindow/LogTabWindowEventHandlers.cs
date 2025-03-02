@@ -44,7 +44,7 @@ namespace LogExpert.Controls.LogTabWindow
                 }
             }
 
-            if (ConfigManager.Settings.Preferences.openLastFiles && _startupFileNames == null)
+            if (ConfigManager.Settings.preferences.openLastFiles && _startupFileNames == null)
             {
                 List<string> tmpList = ObjectClone.Clone(ConfigManager.Settings.lastOpenFilesList);
 
@@ -86,7 +86,7 @@ namespace LogExpert.Controls.LogTabWindow
                 _statusLineThread.Join();
 
                 IList<LogWindow.LogWindow> deleteLogWindowList = new List<LogWindow.LogWindow>();
-                ConfigManager.Settings.alwaysOnTop = TopMost && ConfigManager.Settings.Preferences.allowOnlyOneInstance;
+                ConfigManager.Settings.alwaysOnTop = TopMost && ConfigManager.Settings.preferences.allowOnlyOneInstance;
                 SaveLastOpenFilesList();
 
                 foreach (LogWindow.LogWindow logWindow in _logWindowList)
@@ -488,7 +488,7 @@ namespace LogExpert.Controls.LogTabWindow
         private void OnLogWindowCurrentHighlightGroupChanged(object sender, CurrentHighlightGroupChangedEventArgs e)
         {
             OnHighlightSettingsChanged();
-            ConfigManager.Settings.Preferences.HighlightGroupList = HighlightGroupList;
+            ConfigManager.Settings.hilightGroupList = HilightGroupList;
             ConfigManager.Save(SettingsFlags.HighlightSettings);
         }
 
@@ -962,7 +962,7 @@ namespace LogExpert.Controls.LogTabWindow
 
         private void OnOptionToolStripMenuItemDropDownOpening(object sender, EventArgs e)
         {
-            lockInstanceToolStripMenuItem.Enabled = !ConfigManager.Settings.Preferences.allowOnlyOneInstance;
+            lockInstanceToolStripMenuItem.Enabled = !ConfigManager.Settings.preferences.allowOnlyOneInstance;
             lockInstanceToolStripMenuItem.Checked = StaticData.CurrentLockedMainWindow == this;
         }
 
