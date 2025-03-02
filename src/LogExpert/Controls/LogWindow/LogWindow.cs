@@ -90,7 +90,7 @@ namespace LogExpert.Controls.LogWindow
         private ILogLineColumnizer _currentColumnizer;
 
         //List<HilightEntry> currentHilightEntryList = new List<HilightEntry>();
-        private HilightGroup _currentHighlightGroup = new();
+        private HighlightGroup _currentHighlightGroup = new();
 
         private SearchParams _currentSearchParams;
 
@@ -129,7 +129,7 @@ namespace LogExpert.Controls.LogWindow
         private bool _shouldCancel;
         private bool _shouldTimestampDisplaySyncingCancel;
         private bool _showAdvanced;
-        private List<HilightEntry> _tempHighlightEntryList = [];
+        private List<HighlightEntry> _tempHighlightEntryList = [];
         private int _timeShiftSyncLine = 0;
 
         private bool _waitingForClose;
@@ -198,7 +198,7 @@ namespace LogExpert.Controls.LogWindow
                 filterComboBox.Items.Add(item);
             }
 
-            filterComboBox.DropDownHeight = filterComboBox.ItemHeight * ConfigManager.Settings.preferences.maximumFilterEntriesDisplayed;
+            filterComboBox.DropDownHeight = filterComboBox.ItemHeight * ConfigManager.Settings.Preferences.maximumFilterEntriesDisplayed;
             AutoResizeFilterBox();
 
             filterRegexCheckBox.Checked = _filterParams.isRegex;
@@ -499,7 +499,7 @@ namespace LogExpert.Controls.LogWindow
 
         public string ForcedPersistenceFileName { get; set; } = null;
 
-        public Preferences Preferences => ConfigManager.Settings.preferences;
+        public Preferences Preferences => ConfigManager.Settings.Preferences;
 
         public string GivenFileName { get; set; } = null;
 

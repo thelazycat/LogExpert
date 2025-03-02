@@ -387,7 +387,7 @@ namespace LogExpert.Controls.LogWindow
 
             if (line != null)
             {
-                HilightEntry entry = FindFirstNoWordMatchHilightEntry(line);
+                HighlightEntry entry = FindFirstNoWordMatchHilightEntry(line);
                 e.Graphics.SetClip(e.CellBounds);
 
                 if ((e.State & DataGridViewElementStates.Selected) == DataGridViewElementStates.Selected)
@@ -1195,7 +1195,7 @@ namespace LogExpert.Controls.LogWindow
         {
             if (dataGridView.EditingControl is DataGridViewTextBoxEditingControl ctl)
             {
-                var he = new HilightEntry()
+                var he = new HighlightEntry()
                 {
                     SearchText = ctl.SelectedText,
                     ForegroundColor = Color.Red,
@@ -1224,7 +1224,7 @@ namespace LogExpert.Controls.LogWindow
         {
             if (dataGridView.EditingControl is DataGridViewTextBoxEditingControl ctl)
             {
-                HilightEntry he = new()
+                HighlightEntry he = new()
                 {
                     SearchText = ctl.SelectedText,
                     ForegroundColor = Color.Red,
@@ -1272,7 +1272,7 @@ namespace LogExpert.Controls.LogWindow
             {
                 lock (_currentHighlightGroupLock)
                 {
-                    _currentHighlightGroup.HilightEntryList.AddRange(_tempHighlightEntryList);
+                    _currentHighlightGroup.HighlightEntryList.AddRange(_tempHighlightEntryList);
                     RemoveTempHighlights();
                     OnCurrentHighlightListChanged();
                 }

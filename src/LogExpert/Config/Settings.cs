@@ -1,5 +1,4 @@
 using LogExpert.Classes.Filter;
-using LogExpert.Classes.Highlight;
 using LogExpert.Entities;
 
 using System;
@@ -35,17 +34,13 @@ namespace LogExpert.Config
 
         public bool hideLineColumn;
 
-        public List<HilightEntry> hilightEntryList = []; // legacy. is automatically converted to highlight groups on settings load
-
-        public List<HilightGroup> hilightGroupList = []; // should be in Preferences but is here for mistake. Maybe I migrate it some day.
-
         public bool isMaximized;
 
         public string lastDirectory;
 
         public List<string> lastOpenFilesList = [];
 
-        public Preferences preferences = new();
+        public Preferences Preferences { get; set; } = new();
 
         public RegexHistory regexHistory = new();
 
