@@ -93,7 +93,7 @@ namespace LogExpert.Controls.LogTabWindow
             Load += OnLogTabWindowLoad;
 
             ConfigManager.Instance.ConfigChanged += OnConfigChanged;
-            HighlightGroupList = ConfigManager.Settings.Preferences.HighlightGroupList;
+            HilightGroupList = ConfigManager.Settings.hilightGroupList;
 
             Rectangle led = new(0, 0, 8, 2);
 
@@ -307,9 +307,9 @@ namespace LogExpert.Controls.LogTabWindow
 
         public SearchParams SearchParams { get; private set; } = new SearchParams();
 
-        public Preferences Preferences => ConfigManager.Settings.Preferences;
+        public Preferences Preferences => ConfigManager.Settings.preferences;
 
-        public List<HighlightGroup> HighlightGroupList { get; private set; } = [];
+        public List<HilightGroup> HilightGroupList { get; private set; } = [];
 
         //public Settings Settings
         //{
@@ -324,11 +324,11 @@ namespace LogExpert.Controls.LogTabWindow
 
         #region Internals
 
-        internal HighlightGroup FindHighlightGroup(string groupName)
+        internal HilightGroup FindHighlightGroup(string groupName)
         {
-            lock (HighlightGroupList)
+            lock (HilightGroupList)
             {
-                foreach (HighlightGroup group in HighlightGroupList)
+                foreach (HilightGroup group in HilightGroupList)
                 {
                     if (group.GroupName.Equals(groupName))
                     {

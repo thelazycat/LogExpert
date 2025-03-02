@@ -118,7 +118,7 @@ namespace LogExpert.Classes
 
                             if (o is IColumnizerConfigurator configurator)
                             {
-                                configurator.LoadConfig(ConfigManager.Settings.Preferences.PortableMode ? ConfigManager.PortableModeDir : ConfigManager.ConfigDir);
+                                configurator.LoadConfig(ConfigManager.Settings.preferences.PortableMode ? ConfigManager.PortableModeDir : ConfigManager.ConfigDir);
                             }
 
                             if (o is ILogExpertPlugin plugin)
