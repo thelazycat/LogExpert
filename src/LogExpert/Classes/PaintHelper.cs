@@ -26,7 +26,7 @@ namespace LogExpert.Classes
 
         #region Properties
 
-        private static Preferences Preferences => ConfigManager.Settings.preferences;
+        private static Preferences Preferences => ConfigManager.Settings.Preferences;
 
         #endregion
 
@@ -43,7 +43,7 @@ namespace LogExpert.Classes
 
             if (line != null)
             {
-                HilightEntry entry = logPaintCtx.FindHighlightEntry(line, true);
+                HighlightEntry entry = logPaintCtx.FindHighlightEntry(line, true);
                 e.Graphics.SetClip(e.CellBounds);
                 if ((e.State & DataGridViewElementStates.Selected) == DataGridViewElementStates.Selected)
                 {
@@ -317,12 +317,12 @@ namespace LogExpert.Classes
 
         #region Private Methods
 
-        private static void PaintCell(ILogPaintContext logPaintCtx, DataGridViewCellPaintingEventArgs e, BufferedDataGridView gridView, bool noBackgroundFill, HilightEntry groundEntry)
+        private static void PaintCell(ILogPaintContext logPaintCtx, DataGridViewCellPaintingEventArgs e, BufferedDataGridView gridView, bool noBackgroundFill, HighlightEntry groundEntry)
         {
             PaintHighlightedCell(logPaintCtx, e, gridView, noBackgroundFill, groundEntry);
         }
 
-        private static void PaintHighlightedCell(ILogPaintContext logPaintCtx, DataGridViewCellPaintingEventArgs e, BufferedDataGridView gridView, bool noBackgroundFill, HilightEntry groundEntry)
+        private static void PaintHighlightedCell(ILogPaintContext logPaintCtx, DataGridViewCellPaintingEventArgs e, BufferedDataGridView gridView, bool noBackgroundFill, HighlightEntry groundEntry)
         {
             object value = e.Value ?? string.Empty;
 
@@ -343,7 +343,7 @@ namespace LogExpert.Classes
                         Length = column.FullValue.Length
                     };
 
-                    var he = new HilightEntry
+                    var he = new HighlightEntry
                     {
                         SearchText = column.FullValue,
                         ForegroundColor = groundEntry?.ForegroundColor ?? ColorMode.ForeColor,
@@ -459,7 +459,7 @@ namespace LogExpert.Classes
         private static IList<HilightMatchEntry> MergeHighlightMatchEntries(IList<HilightMatchEntry> matchList, HilightMatchEntry groundEntry)
         {
             // Fill an area with lenth of whole text with a default hilight entry
-            HilightEntry[] entryArray = new HilightEntry[groundEntry.Length];
+            HighlightEntry[] entryArray = new HighlightEntry[groundEntry.Length];
             for (int i = 0; i < entryArray.Length; ++i)
             {
                 entryArray[i] = groundEntry.HilightEntry;
@@ -487,7 +487,7 @@ namespace LogExpert.Classes
             IList<HilightMatchEntry> mergedList = new List<HilightMatchEntry>();
             if (entryArray.Length > 0)
             {
-                HilightEntry currentEntry = entryArray[0];
+                HighlightEntry currentEntry = entryArray[0];
                 int lastStartPos = 0;
                 int pos = 0;
                 for (; pos < entryArray.Length; ++pos)

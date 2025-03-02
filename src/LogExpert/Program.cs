@@ -65,6 +65,7 @@ namespace LogExpert
 
             CmdLine cmdLine = new();
             CmdLineString configFile = new("config", false, "A configuration (settings) file");
+            CmdLineString configFileHighlights = new("highlightConfig", false, "A configuration (settings) file for highlights");
             cmdLine.RegisterParameter(configFile);
             string[] remainingArgs = cmdLine.Parse(orgArgs);
 
@@ -86,19 +87,9 @@ namespace LogExpert
                 }
             }
             string[] args = [.. argsList];
-            if (configFile.Exists)
-            {
-                FileInfo cfgFileInfo = new(configFile.Value);
 
-                if (cfgFileInfo.Exists)
-                {
-                    ConfigManager.Import(cfgFileInfo, ExportImportFlags.All);
-                }
-                else
-                {
-                    MessageBox.Show(@"Config file not found", @"LogExpert");
-                }
-            }
+            LoadConfigurationFile(configFile);
+            LoadConfigurationHighlightsFile(configFileHighlights);
 
             int pId = Process.GetCurrentProcess().SessionId;
 
@@ -150,7 +141,7 @@ namespace LogExpert
                             // another instance already exists
                             WindowsIdentity wi = WindowsIdentity.GetCurrent();
                             //LogExpertProxy proxy = (LogExpertProxy)Activator.GetObject(typeof(LogExpertProxy), "ipc://LogExpert" + pId + "/LogExpertProxy");
-                            if (settings.preferences.allowOnlyOneInstance)
+                            if (settings.Preferences.allowOnlyOneInstance)
                             {
                                 client.LoadFiles(new Grpc.FileNames { FileNames_ = { args } });
                             }
@@ -176,12 +167,12 @@ namespace LogExpert
                         MessageBox.Show($"Cannot open connection to first instance ({errMsg})", "LogExpert");
                     }
 
-                    if (settings.preferences.allowOnlyOneInstance && settings.preferences.ShowErrorMessageAllowOnlyOneInstances)
+                    if (settings.Preferences.allowOnlyOneInstance && settings.Preferences.ShowErrorMessageAllowOnlyOneInstances)
                     {
                         AllowOnlyOneInstanceErrorDialog a = new();
                         if (a.ShowDialog() == DialogResult.OK)
                         {
-                            settings.preferences.ShowErrorMessageAllowOnlyOneInstances = !a.DoNotShowThisMessageAgain;
+                            settings.Preferences.ShowErrorMessageAllowOnlyOneInstances = !a.DoNotShowThisMessageAgain;
                             ConfigManager.Save(SettingsFlags.All);
                         }
 
@@ -197,6 +188,41 @@ namespace LogExpert
                 MessageBox.Show($"Cannot open connection to first instance ({ex.Message})", "LogExpert");
             }
         }
+
+        private static void LoadConfigurationFile(CmdLineString configFile)
+        {
+            if (configFile.Exists)
+            {
+                FileInfo cfgFileInfo = new(configFile.Value);
+
+                if (cfgFileInfo.Exists)
+                {
+                    ConfigManager.Import(cfgFileInfo, ExportImportFlags.All);
+                }
+                else
+                {
+                    MessageBox.Show(@"Config file not found", @"LogExpert");
+                }
+            }
+        }
+
+        private static void LoadConfigurationHighlightsFile(CmdLineString configFile)
+        {
+            if (configFile.Exists)
+            {
+                FileInfo cfgFileInfo = new(configFile.Value);
+
+                if (cfgFileInfo.Exists)
+                {
+                    ConfigManager.ImportHighlightSettings(cfgFileInfo);
+                }
+                else
+                {
+                    MessageBox.Show(@"Highlights config file not found", @"LogExpert");
+                }
+            }
+        }
+
 
         [STAThread]
         private static void ShowUnhandledException(object exceptionObject)
